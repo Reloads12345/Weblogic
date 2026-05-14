@@ -1,0 +1,142 @@
+import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
+import "./globals.css";
+import { BRAND } from "@/lib/data";
+
+import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
+import PersonalizationProvider from "@/components/providers/PersonalizationProvider";
+import AssetProvider from "@/components/providers/AssetProvider";
+import SoundProvider from "@/components/providers/SoundProvider";
+import LeadModalProvider from "@/components/ui/LeadModalProvider";
+
+import MagneticCursor from "@/components/ui/MagneticCursor";
+import StickyCta from "@/components/ui/StickyCta";
+import ExitIntent from "@/components/ui/ExitIntent";
+import AnnouncementBar from "@/components/ui/AnnouncementBar";
+
+const sans = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const display = Inter({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "600", "700", "800", "900"],
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  title: {
+    default: `${BRAND.name} — ${BRAND.tagline}`,
+    template: `%s · ${BRAND.name}`,
+  },
+  description: BRAND.supporting,
+  applicationName: BRAND.name,
+  keywords: [
+    "composable architecture",
+    "B2B web engineering",
+    "headless CMS",
+    "Next.js agency",
+    "design systems",
+    "Storyblok",
+    "Sanity",
+    "Contentful",
+  ],
+  openGraph: {
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.supporting,
+    type: "website",
+    siteName: BRAND.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND.name} — ${BRAND.tagline}`,
+    description: BRAND.supporting,
+  },
+  robots: { index: true, follow: true },
+  icons: {
+    icon: [
+      { url: "/icons/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "dark",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${sans.variable} ${display.variable} ${mono.variable} bg-ink-0`}
+    >
+      <head>
+        {/* Preload the brand logo — it's above-the-fold on every route,
+            so we want the browser to start fetching it the moment the
+            HTML arrives, in parallel with everything else. Kills the
+            flash where the SVG fallback paints before the real logo. */}
+        <link
+          rel="preload"
+          as="image"
+          href="/uploads/logo.png"
+          fetchPriority="high"
+        />
+      </head>
+      <body className="bg-ink-0 text-bone antialiased" suppressHydrationWarning>
+        <PersonalizationProvider>
+          <AssetProvider>
+            <SoundProvider>
+              <LeadModalProvider>
+                <SmoothScrollProvider>
+                  <AnnouncementBar />
+                  {children}
+                  {/* Global UI — public site only, no admin chrome */}
+                  <MagneticCursor />
+                  <StickyCta />
+                  <ExitIntent />
+                </SmoothScrollProvider>
+                {/* Vercel observability — Speed Insights captures Core Web Vitals
+                    (LCP / INP / CLS) and Analytics captures pageviews. Both
+                    no-op outside Vercel hosting, so they're safe in dev. */}
+                <SpeedInsights />
+                <Analytics />
+              </LeadModalProvider>
+            </SoundProvider>
+          </AssetProvider>
+        </PersonalizationProvider>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: BRAND.name,
+              url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://weblogic.studio",
+              slogan: BRAND.tagline,
+              description: BRAND.supporting,
+              foundingDate: BRAND.established,
+              areaServed: ["US", "UK", "EU", "APAC"],
+            }),
+          }}
+        />
+      </body>
+    </html>
+  );
+}

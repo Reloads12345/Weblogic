@@ -1,0 +1,58 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  // Pin tracing root to the project dir so Next.js doesn't pick up the
+  // stray `package-lock.json` one level up in OneDrive.
+  outputFileTracingRoot: __dirname,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion", "@react-three/drei"],
+  },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "cdn.weblogic.example" },
+    ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
+        // Most uploads can change (admin re-uploads work projects, etc.) —
+        // short cache + stale-while-revalidate so the browser uses the
+        // cached copy immediately while checking for an update in the
+        // background.
+        source: "/uploads/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=300, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        // Static texture assets — never change. Cache hard.
+        source: "/textures/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;

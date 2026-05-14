@@ -1,0 +1,437 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Marquee keyframes — explicit, top-level, never purged.
+   `wl-marquee-left`  → content drifts left  (visual flow right→left)
+   `wl-marquee-right` → content drifts right (visual flow left→right)
+
+   Track must be doubled (`[...items, ...items]`) so the 50% jump
+   loops seamlessly.
+   ============================================================ */
+
+@keyframes wl-marquee-left {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes wl-marquee-right {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* ============================================================
+   WebLogic — base layer
+   ============================================================ */
+
+:root {
+  --ink: #000000;
+  --bone: #ffffff;
+  --mute: #8e8e93;
+  --electric: #0052ff;
+  --line: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --grid-12-gap: clamp(16px, 1.5vw, 28px);
+  --container-pad: clamp(20px, 4vw, 64px);
+  /* Height of the announcement bar. Set to 0px when dismissed via [data-announcement-dismissed=true] */
+  --announcement-h: 36px;
+}
+
+html[data-announcement-dismissed="true"] {
+  --announcement-h: 0px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background: var(--ink);
+    color: var(--bone);
+  }
+
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  body {
+    background: var(--ink);
+    color: var(--bone);
+    font-feature-settings: "ss01", "ss02", "cv01", "cv11";
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--electric);
+    color: var(--bone);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--electric);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #000; }
+  ::-webkit-scrollbar-thumb {
+    background: #1a1a1a;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--electric); }
+}
+
+/* ============================================================
+   Components
+   ============================================================ */
+
+@layer components {
+  /*
+    Container width is responsive but capped via a sane clamp so the layout
+    NEVER deforms when the user zooms out — every section keeps the same
+    relative proportions whether the viewport is 1280px or 5120px.
+
+    `min(96vw, …)` keeps content inside the viewport on narrow screens, and
+    the px cap prevents lines of body copy from stretching past comfortable
+    reading width on ultra-wide monitors.
+  */
+  .container-grid {
+    width: 100%;
+    max-width: min(96vw, 1680px);
+    margin-inline: auto;
+    padding-inline: var(--container-pad);
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--grid-12-gap);
+  }
+
+  .container-pad {
+    width: 100%;
+    max-width: min(96vw, 1680px);
+    margin-inline: auto;
+    padding-inline: var(--container-pad);
+  }
+
+  .eyebrow {
+    @apply uppercase text-eyebrow text-mute font-mono;
+    font-feature-settings: "tnum";
+  }
+
+  .hairline {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.18),
+      transparent
+    );
+    height: 1px;
+    width: 100%;
+  }
+
+  .hairline-vertical {
+    background: linear-gradient(
+      180deg,
+      transparent,
+      rgba(255, 255, 255, 0.14),
+      transparent
+    );
+    width: 1px;
+  }
+
+  /* Glass panel */
+  .glass {
+    background: rgba(10, 10, 10, 0.55);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--line);
+  }
+
+  .glass-strong {
+    background: rgba(10, 10, 10, 0.78);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid var(--line-strong);
+  }
+
+  /* Buttons */
+  .btn-electric {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    background: var(--electric);
+    color: var(--bone);
+    font-weight: 500;
+    font-size: 0.875rem;
+    letter-spacing: -0.005em;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      background 0.3s ease;
+    box-shadow: 0 0 0 0 rgba(0, 82, 255, 0);
+  }
+  .btn-electric:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 30px rgba(0, 82, 255, 0.45),
+      0 0 60px rgba(0, 82, 255, 0.25);
+  }
+  .btn-electric::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    pointer-events: none;
+    background: radial-gradient(
+      50% 100% at 50% 0%,
+      rgba(255, 255, 255, 0.35),
+      rgba(255, 255, 255, 0) 70%
+    );
+    mix-blend-mode: overlay;
+    opacity: 0.6;
+  }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--bone);
+    border: 1px solid var(--line-strong);
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-ghost:hover {
+    border-color: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.75rem;
+    color: var(--mute);
+    font-family: var(--font-mono), monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--electric);
+    box-shadow: 0 0 0 0 rgba(0, 82, 255, 0.6);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  /* Card with corner brackets */
+  .bracket-card {
+    position: relative;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.01);
+    transition: border-color 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bracket-card::before,
+  .bracket-card::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-color: var(--electric);
+    transition: opacity 0.4s ease;
+    opacity: 0;
+  }
+  .bracket-card::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+  }
+  .bracket-card::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+  }
+  .bracket-card:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  .bracket-card:hover::before,
+  .bracket-card:hover::after {
+    opacity: 1;
+  }
+
+  /* Section heading */
+  .section-h {
+    @apply font-display text-display-lg text-bone tracking-tightest;
+  }
+
+  /* Mega menu link styling */
+  .mega-link {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    color: var(--bone);
+    transition: color 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mega-link:hover {
+    color: var(--electric);
+    transform: translateX(2px);
+  }
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Grid backgrounds removed — pure matte black is the only background. */
+  .grid-bg,
+  .grid-bg-fine { background: transparent; }
+
+  .vignette {
+    box-shadow:
+      inset 0 0 200px 60px rgba(0, 0, 0, 0.85);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 28px rgba(0, 82, 255, 0.45);
+  }
+
+  .text-gradient-electric {
+    background: linear-gradient(180deg, #ffffff 60%, #4f86ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-mute {
+    background: linear-gradient(180deg, #ffffff 0%, #6f6f78 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .mask-fade-r {
+    -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent);
+    mask-image: linear-gradient(90deg, #000 70%, transparent);
+  }
+  .mask-fade-l {
+    -webkit-mask-image: linear-gradient(270deg, #000 70%, transparent);
+    mask-image: linear-gradient(270deg, #000 70%, transparent);
+  }
+  .mask-fade-edges {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 12%,
+      #000 88%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 12%,
+      #000 88%,
+      transparent
+    );
+  }
+  .mask-fade-bottom {
+    -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent);
+    mask-image: linear-gradient(180deg, #000 60%, transparent);
+  }
+
+  .stack-row > * + * {
+    margin-left: var(--gap, 0.5rem);
+  }
+
+  .magnetic-target {
+    will-change: transform;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* For SplitText reveal */
+  .reveal-line {
+    overflow: hidden;
+    display: block;
+  }
+  .reveal-line > span {
+    display: inline-block;
+    transform: translateY(110%);
+    will-change: transform;
+  }
+  .reveal-line.is-in > span {
+    transform: translateY(0);
+    transition: transform 0.95s cubic-bezier(0.2, 0.85, 0.2, 1);
+  }
+
+  .shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 2.6s linear infinite;
+  }
+
+  /* Reduced motion — narrow scope so marquees & decorative loops still play.
+     Framer Motion respects prefers-reduced-motion at the component level, and
+     Lenis disables itself at the provider level. Heavy hover effects opt in
+     via .reduce-motion-disable. */
+  @media (prefers-reduced-motion: reduce) {
+    .reduce-motion-disable,
+    .reduce-motion-disable * {
+      animation-duration: 0.001s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001s !important;
+    }
+  }
+}
+
+/* ============================================================
+   Marquee animation classes — guaranteed in the CSS output.
+   Pair with `--marquee-duration` to override per instance.
+   Track must be doubled (or tripled) for seamless looping.
+   ============================================================ */
+
+.wl-marquee-ltr {
+  animation: wl-marquee-right var(--marquee-duration, 60s) linear infinite;
+}
+.wl-marquee-rtl {
+  animation: wl-marquee-left var(--marquee-duration, 60s) linear infinite;
+}
+
+/* No-flash dark theme */
+html, body {
+  background-color: #000;
+}

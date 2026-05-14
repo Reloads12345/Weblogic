@@ -1,0 +1,47 @@
+{
+  "name": "weblogic",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WebLogic — Composable websites that never stand still.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "lighthouse": "npx --yes lighthouse http://localhost:3000 --preset=desktop --output=html --output-path=./lighthouse-desktop.html --chrome-flags=\"--headless\" --view",
+    "lighthouse:mobile": "npx --yes lighthouse http://localhost:3000 --output=html --output-path=./lighthouse-mobile.html --chrome-flags=\"--headless\" --view",
+    "lighthouse:all": "npx --yes lighthouse http://localhost:3000 --preset=desktop --output=html,json --output-path=./lighthouse-desktop --chrome-flags=\"--headless\" && npx --yes lighthouse http://localhost:3000 --output=html,json --output-path=./lighthouse-mobile --chrome-flags=\"--headless\""
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.0.6",
+    "@react-three/fiber": "^9.0.4",
+    "@stripe/stripe-js": "^4.10.0",
+    "@vercel/analytics": "^1.4.1",
+    "@vercel/speed-insights": "^1.1.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.11.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.13",
+    "lucide-react": "^0.453.0",
+    "next": "^15.0.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "stripe": "^17.3.0",
+    "tailwind-merge": "^2.5.4",
+    "three": "^0.169.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.169.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.13.0",
+    "eslint-config-next": "^15.0.3",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3"
+  }
+}
