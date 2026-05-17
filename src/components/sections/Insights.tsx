@@ -1,13 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowUpRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { POSTS } from "@/lib/data";
 import { useAssets } from "@/components/providers/AssetProvider";
+import { useLeadModal } from "@/components/ui/LeadModalProvider";
 import { cn } from "@/lib/utils";
 
 export default function Insights() {
   const { getImageUrl } = useAssets();
+  const { open: openLead } = useLeadModal();
 
   return (
     <section
@@ -17,20 +19,23 @@ export default function Insights() {
       <div className="container-pad">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">/ Insights</p>
+            <p className="eyebrow">/ Insights · Launching soon</p>
             <h2 className="section-h mt-5 max-w-[18ch] text-balance">
               Field notes from the{" "}
               <span className="text-mute">composable frontier</span>.
             </h2>
+            <p className="mt-4 max-w-xl text-sm text-mute md:text-base">
+              The reading list below ships in the coming weeks. Want early
+              access?{" "}
+              <button
+                type="button"
+                onClick={() => openLead("Insights · Early access")}
+                className="text-electric underline-offset-2 transition hover:underline"
+              >
+                Tell us what you want covered.
+              </button>
+            </p>
           </div>
-          <a
-            href="#"
-            data-cursor="link"
-            className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-[0.2em] text-mute transition-colors hover:text-bone"
-          >
-            View all insights
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </a>
         </div>
 
         {/* 5-up grid (1 hero col-span-6 row-span-2 + 4 small col-span-3) */}
@@ -39,10 +44,8 @@ export default function Insights() {
             const coverUrl = getImageUrl(p.cover);
             const isHero = i === 0;
             return (
-              <motion.a
+              <motion.article
                 key={p.slug}
-                href="#"
-                data-cursor="link"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
@@ -132,7 +135,13 @@ export default function Insights() {
                     </span>
                   </div>
                 </div>
-              </motion.a>
+
+                {/* Coming-soon badge — preserves the polish while making it
+                    clear the post isn't published yet. */}
+                <span className="absolute right-4 bottom-4 z-10 rounded-full border border-white/10 bg-ink-100/80 px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.2em] text-mute backdrop-blur">
+                  Coming soon
+                </span>
+              </motion.article>
             );
           })}
         </div>

@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowUpRight, Github, Linkedin, Twitter, Youtube } from "lucide-react";
+import { ArrowUpRight, Mail } from "lucide-react";
 import Logo from "@/components/ui/Logo";
 import RemoteCoverageGlobe from "@/components/globe/RemoteCoverageGlobe";
 import MagneticButton from "@/components/ui/MagneticButton";
+import SocialIcon from "@/components/ui/SocialIcon";
 import { useLeadModal } from "@/components/ui/LeadModalProvider";
-import { BRAND, NAV } from "@/lib/data";
+import { BRAND, NAV, SOCIAL_LINKS } from "@/lib/data";
 
 export default function Footer() {
   const { open: openLead } = useLeadModal();
@@ -42,8 +43,39 @@ export default function Footer() {
               Book a Free Audit
               <ArrowUpRight className="h-4 w-4" />
             </MagneticButton>
-            <a href={`mailto:${BRAND.email}`} className="btn-ghost text-sm" data-cursor="link">
+            <a
+              href={`mailto:${BRAND.email}`}
+              className="btn-ghost text-sm"
+              data-cursor="link"
+            >
+              <Mail className="h-3.5 w-3.5" />
               {BRAND.email}
+            </a>
+          </div>
+
+          {/* Visible, clickable contact emails — primary + support */}
+          <div className="mt-8 flex flex-col gap-1.5 text-sm">
+            <a
+              href={`mailto:${BRAND.email}`}
+              data-cursor="link"
+              className="group inline-flex w-fit items-center gap-2 text-bone/85 transition-colors hover:text-electric"
+            >
+              <Mail className="h-3.5 w-3.5 text-mute group-hover:text-electric" />
+              {BRAND.email}
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">
+                · projects
+              </span>
+            </a>
+            <a
+              href={`mailto:${BRAND.supportEmail}`}
+              data-cursor="link"
+              className="group inline-flex w-fit items-center gap-2 text-bone/85 transition-colors hover:text-electric"
+            >
+              <Mail className="h-3.5 w-3.5 text-mute group-hover:text-electric" />
+              {BRAND.supportEmail}
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-mute">
+                · support
+              </span>
             </a>
           </div>
         </div>
@@ -91,31 +123,53 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Social row */}
+      {/* Social row — GitHub (placeholder), LinkedIn, X, TikTok, Instagram.
+          Real-URL links open in a new tab with `noopener noreferrer`.
+          Placeholders (e.g. GitHub before the org is live) render as
+          inert <span> so we never ship broken links to public traffic. */}
       <div className="container-pad mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-white/8 pt-6">
-        <div className="flex items-center gap-2">
-          {[
-            { icon: Linkedin, label: "LinkedIn", href: "https://www.linkedin.com/company/weblogic-studio" },
-            { icon: Twitter, label: "X / Twitter", href: "https://x.com/weblogicstudio" },
-            { icon: Youtube, label: "YouTube", href: "https://youtube.com/@weblogicstudio" },
-            { icon: Github, label: "GitHub", href: "https://github.com/weblogic-studio" },
-          ].map((s) => {
-            const Icon = s.icon;
+        <ul className="flex flex-wrap items-center gap-2.5">
+          {SOCIAL_LINKS.map((s) => {
+            const base =
+              "grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/65 transition-all duration-300";
+            const interactive =
+              "hover:-translate-y-0.5 hover:border-electric/60 hover:text-electric hover:shadow-[0_0_0_4px_rgba(0,82,255,0.08)]";
+            const placeholderStyle =
+              "cursor-default opacity-50 hover:translate-y-0 hover:border-white/10 hover:text-white/65 hover:shadow-none";
+
+            if (s.placeholder) {
+              return (
+                <li key={s.key}>
+                  <span
+                    role="link"
+                    aria-disabled="true"
+                    aria-label={s.label}
+                    title={s.label}
+                    className={`${base} ${placeholderStyle}`}
+                  >
+                    <SocialIcon social={s} className="h-4 w-4" />
+                  </span>
+                </li>
+              );
+            }
+
             return (
-              <a
-                key={s.label}
-                href={s.href}
-                aria-label={s.label}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-cursor="link"
-                className="grid h-10 w-10 place-items-center rounded-full border border-white/10 text-white/65 transition-all duration-300 hover:-translate-y-0.5 hover:border-electric/60 hover:text-electric hover:shadow-[0_0_0_4px_rgba(0,82,255,0.08)]"
-              >
-                <Icon className="h-4 w-4" />
-              </a>
+              <li key={s.key}>
+                <a
+                  href={s.href}
+                  aria-label={`${s.label} (opens in a new tab)`}
+                  title={s.label}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-cursor="link"
+                  className={`${base} ${interactive}`}
+                >
+                  <SocialIcon social={s} className="h-4 w-4" />
+                </a>
+              </li>
             );
           })}
-        </div>
+        </ul>
         <p className="text-[10px] font-mono uppercase tracking-[0.22em] text-mute">
           Built remotely · United States
         </p>

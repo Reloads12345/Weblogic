@@ -362,7 +362,7 @@ function BrowserPlaceholder({ slug }: { slug: string }) {
           <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <span className="ml-3 hidden flex-1 truncate rounded border border-white/8 bg-ink-0 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-white/30 md:block">
-            weblogic.studio / work / {slug}
+            weblogic.digital / work / {slug}
           </span>
         </div>
         {/* Page body */}

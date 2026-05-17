@@ -24,6 +24,15 @@ import type { CaseStudy } from "@/types";
 
 const STORE_PATH = path.join(process.cwd(), "public", "uploads", "work-items.json");
 
+/**
+ * Vercel runtime filesystem is read-only. Production saves will throw
+ * EROFS otherwise. Detect it and surface a clean message in the admin UI
+ * instead of a 500. Reads (getWorkItems) still work because they fall
+ * back to the data.ts defaults when the JSON file is missing.
+ */
+const IS_VERCEL_PROD =
+  process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production";
+
 const LabelSchema = z.enum([
   "Real Client",
   "Demo",
@@ -104,6 +113,13 @@ export async function getWorkItems(): Promise<CaseStudy[]> {
 export async function saveWorkItemsAction(
   items: unknown,
 ): Promise<{ ok: boolean; error?: string }> {
+  if (IS_VERCEL_PROD) {
+    return {
+      ok: false,
+      error:
+        "Saving work items on Vercel needs the storage migrated to Vercel Blob or a database. Edit src/lib/data.ts → CASE_STUDIES locally and redeploy for now.",
+    };
+  }
   const parsed = z.array(WorkItemSchema).safeParse(items);
   if (!parsed.success) {
     return {
@@ -145,6 +161,14 @@ export async function saveWorkItemsAction(
 
 /** Reset to the defaults baked into data.ts. */
 export async function resetWorkItemsAction(): Promise<{ ok: boolean }> {
+  if (IS_VERCEL_PROD) {
+    // Nothing to delete in prod — the JSON file never existed there.
+    // Just kick the revalidation so the site re-reads CASE_STUDIES.
+    revalidatePath("/");
+    revalidatePath("/work/[slug]", "page");
+    revalidatePath("/admin/dashboard/work");
+    return { ok: true };
+  }
   try {
     await fs.unlink(STORE_PATH);
   } catch {

@@ -8,6 +8,32 @@ export const dynamic = "force-dynamic";
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 const MANIFEST = path.join(UPLOAD_DIR, "manifest.json");
 
+/**
+ * Vercel's runtime filesystem is READ-ONLY. Any POST/DELETE attempt from
+ * the admin UI in production will throw EROFS or EACCES. We detect that
+ * environment up-front and return a 503 with a clear, actionable message
+ * instead of an opaque 500. Reads (GET) still work because they only need
+ * to read files baked into the deploy.
+ *
+ * To unblock writes in production, swap this file's fs.writeFile/unlink
+ * calls for Vercel Blob (`@vercel/blob`) — see /docs in the audit.
+ */
+const IS_VERCEL_PROD =
+  process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production";
+
+function readOnlyResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "Asset uploads need to be migrated to Vercel Blob for production. " +
+        "The admin upload endpoint is read-only on Vercel until that's wired in. " +
+        "Run admin uploads locally for now.",
+      code: "READ_ONLY_FS",
+    },
+    { status: 503 },
+  );
+}
+
 const VALID_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
 const VALID_IMAGE = ["image/svg+xml", "image/png", "image/jpeg", "image/webp"];
 const VALID_DOC = ["application/pdf"];
@@ -69,6 +95,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (IS_VERCEL_PROD) return readOnlyResponse();
   try {
     const form = await req.formData();
     const file = form.get("file");
@@ -130,6 +157,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (IS_VERCEL_PROD) return readOnlyResponse();
   const url = new URL(req.url);
   const slotRaw = url.searchParams.get("slot");
   if (!slotRaw) return NextResponse.json({ error: "Missing slot" }, { status: 400 });

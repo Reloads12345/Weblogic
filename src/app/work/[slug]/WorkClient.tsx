@@ -183,7 +183,7 @@ export default function WorkClient({ slug, item: cs, items }: Props) {
                         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
                         <span className="h-2.5 w-2.5 rounded-full bg-white/15" />
                         <span className="ml-3 truncate font-mono text-[9px] uppercase tracking-[0.18em] text-white/30">
-                          weblogic.studio / work / {slug}
+                          weblogic.digital / work / {slug}
                         </span>
                       </div>
                       <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-lg">

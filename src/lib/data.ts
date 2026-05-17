@@ -19,11 +19,66 @@ export const BRAND = {
   tagline: "Websites & systems that evolve with your business.",
   supporting:
     "WebLogic builds high-performance websites, client portals, payment systems, and automations for businesses that need more than a basic online presence.",
-  domain: "weblogic.studio",
-  email: "studio@weblogic.studio",
+  domain: "weblogic.digital",
+  url: "https://weblogic.digital",
+  email: "caleb@weblogic.digital",
+  supportEmail: "support@weblogic.digital",
   city: "Remote · United States",
   established: "2024",
 };
+
+/* =========================================================================
+   SOCIAL LINKS — single source of truth for every icon row on the site.
+
+   Replace the placeholder URLs below with the real WebLogic profiles when
+   they're ready. Each entry has a `placeholder` flag so the Footer can
+   render the icon as inert-styled until a real URL is wired in.
+   ========================================================================= */
+
+export interface SocialLink {
+  key: "github" | "linkedin" | "x" | "tiktok" | "instagram";
+  label: string;
+  href: string;
+  /** When true, the icon shows but the link is treated as not-yet-live. */
+  placeholder?: boolean;
+}
+
+export const SOCIAL_LINKS: SocialLink[] = [
+  {
+    // GitHub profile not live yet. Button stays in the row for visual
+    // consistency; clicking it opens the placeholder URL in a new tab
+    // (no broken-link error). Flip `placeholder: false` and update href
+    // once the GitHub org is created.
+    key: "github",
+    label: "GitHub (coming soon)",
+    href: "#",
+    placeholder: true,
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/in/weblogic-digital-solutions-46b50640b/",
+    placeholder: false,
+  },
+  {
+    key: "x",
+    label: "X",
+    href: "https://x.com/weblogic_tech",
+    placeholder: false,
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    href: "https://www.tiktok.com/@weblogic.design",
+    placeholder: false,
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    href: "https://www.instagram.com/weblogic.digital/",
+    placeholder: false,
+  },
+];
 
 /* =========================================================================
    NAVIGATION  (5-column mega menu — exact structure)

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms governing use of weblogic.studio.",
+  description: "Terms governing use of weblogic.digital.",
 };
 
 export default function Page() {

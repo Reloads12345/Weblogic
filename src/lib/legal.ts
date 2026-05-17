@@ -31,7 +31,7 @@ export const LEGAL: LegalDoc[] = [
       {
         heading: "Your rights",
         body: [
-          "You can request access, correction, deletion, or export of your data at any time by emailing studio@weblogic.studio. We respond within five business days.",
+          "You can request access, correction, deletion, or export of your data at any time by emailing caleb@weblogic.digital. We respond within five business days.",
           "EU and UK residents have the rights granted by GDPR / UK-GDPR. California residents have CCPA rights. We honor all applicable requests regardless of jurisdiction.",
         ],
       },
@@ -45,7 +45,7 @@ export const LEGAL: LegalDoc[] = [
       {
         heading: "Contact",
         body: [
-          "Questions about this policy: studio@weblogic.studio.",
+          "Questions about this policy: caleb@weblogic.digital.",
           "Postal: WebLogic Studio · 28 W 36th St, New York, NY 10018.",
         ],
       },
@@ -55,13 +55,13 @@ export const LEGAL: LegalDoc[] = [
     slug: "terms",
     title: "Terms of Service",
     subtitle:
-      "The agreement that governs your use of weblogic.studio and any deliverables we provide.",
+      "The agreement that governs your use of weblogic.digital and any deliverables we provide.",
     effective: "Effective May 2026",
     sections: [
       {
         heading: "Use of this site",
         body: [
-          "By accessing weblogic.studio you agree to use the site lawfully and not attempt to disrupt or reverse-engineer it. We reserve the right to revoke access for misuse.",
+          "By accessing weblogic.digital you agree to use the site lawfully and not attempt to disrupt or reverse-engineer it. We reserve the right to revoke access for misuse.",
           "All content — copy, design, code, assets, case studies — is © WebLogic Studio unless explicitly attributed otherwise. You may not republish without written permission.",
         ],
       },
@@ -132,7 +132,7 @@ export const LEGAL: LegalDoc[] = [
       {
         heading: "Reporting a vulnerability",
         body: [
-          "Send disclosures to security@weblogic.studio. We acknowledge within 24 hours and provide a timeline within 5 business days.",
+          "Send disclosures to support@weblogic.digital. We acknowledge within 24 hours and provide a timeline within 5 business days.",
           "We thank coordinated disclosers publicly with consent.",
         ],
       },
@@ -165,7 +165,7 @@ export const LEGAL: LegalDoc[] = [
         heading: "Known limitations",
         body: [
           "The interactive 3D globe is decorative and not exposed to assistive technology. The same data (cities, clients, metrics) is available in the Global Reach section as a list.",
-          "If you encounter a barrier, email studio@weblogic.studio with the URL and a description. We aim to acknowledge within 2 business days.",
+          "If you encounter a barrier, email caleb@weblogic.digital with the URL and a description. We aim to acknowledge within 2 business days.",
         ],
       },
     ],
@@ -187,7 +187,7 @@ export const LEGAL: LegalDoc[] = [
         heading: "Founder",
         body: [
           "Caleb Gathu, Founder. Caleb personally architects and ships every WebLogic engagement, with a small network of senior engineers and designers for surge capacity.",
-          "Press contact: studio@weblogic.studio",
+          "Press contact: caleb@weblogic.digital",
         ],
       },
       {
@@ -202,7 +202,7 @@ export const LEGAL: LegalDoc[] = [
         body: [
           "Wordmark: [ WebLogic ] — full white on matte black, brackets in 40% white. SVG and PNG available on request.",
           "Accent color: electric blue #0052FF. Primary type: Inter. Use without alteration of letter spacing or weight.",
-          "Email studio@weblogic.studio for high-resolution assets and for permission to use the wordmark in editorial contexts.",
+          "Email caleb@weblogic.digital for high-resolution assets and for permission to use the wordmark in editorial contexts.",
         ],
       },
     ],
