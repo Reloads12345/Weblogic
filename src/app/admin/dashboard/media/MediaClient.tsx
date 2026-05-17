@@ -263,9 +263,12 @@ export default function MediaClient() {
                 onDrop={async (e) => {
                   e.preventDefault();
                   setDragOver(null);
-                  if (productionBlocked) return;
+                  if (productionBlocked || isUploading) return;
                   const f = e.dataTransfer.files?.[0];
-                  if (f) await setAsset(slot.key, f);
+                  if (f) {
+                    setPreviewFailed((p) => ({ ...p, [slot.key]: false }));
+                    await setAsset(slot.key, f);
+                  }
                 }}
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border bg-ink-50/40 transition-all duration-300",
@@ -395,13 +398,22 @@ export default function MediaClient() {
                       <input
                         type="file"
                         accept={slot.accept}
-                        disabled={productionBlocked}
+                        disabled={productionBlocked || Boolean(isUploading)}
                         className="sr-only"
                         onChange={async (e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setPreviewFailed((p) => ({ ...p, [slot.key]: false }));
+                          const input = e.currentTarget;
+                          const f = input.files?.[0];
+                          if (!f) return;
+                          setPreviewFailed((p) => ({ ...p, [slot.key]: false }));
+                          try {
                             await setAsset(slot.key, f);
+                          } finally {
+                            // CRITICAL: reset the file input value so picking
+                            // the SAME file again still fires `onChange`.
+                            // Without this, a user who hits "Replace" with
+                            // the same filename gets a dead button until
+                            // they pick a different file or refresh.
+                            input.value = "";
                           }
                         }}
                       />

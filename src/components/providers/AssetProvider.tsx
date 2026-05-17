@@ -59,6 +59,36 @@ interface Ctx {
 
 const AssetCtx = createContext<Ctx | null>(null);
 
+/**
+ * Append `?_v=<timestamp>` to every asset URL so the browser refetches
+ * after a replace upload.
+ *
+ * Vercel Blob with `addRandomSuffix: false` returns the SAME public URL
+ * when you overwrite a file at the same path. Without a cache-buster the
+ * browser's HTTP image cache happily serves the old bytes — the user sees
+ * the previous image and concludes the upload "didn't work."
+ *
+ * We rebuild the URL with the manifest's `uploadedAt` so the cache key
+ * changes every time a slot is replaced.
+ */
+function withCacheBust(asset: AssetEntry): AssetEntry {
+  if (!asset?.url) return asset;
+  const sep = asset.url.includes("?") ? "&" : "?";
+  return {
+    ...asset,
+    url: `${asset.url}${sep}_v=${asset.uploadedAt ?? Date.now()}`,
+  };
+}
+
+function normalizeAssets(raw: AssetMap): AssetMap {
+  const out: AssetMap = {};
+  for (const slot of Object.keys(raw)) {
+    const entry = raw[slot];
+    if (entry?.url) out[slot] = withCacheBust(entry);
+  }
+  return out;
+}
+
 export default function AssetProvider({
   children,
 }: {
@@ -108,7 +138,9 @@ export default function AssetProvider({
         (KNOWN_MODES as string[]).includes(raw.mode)
           ? (raw.mode as UploadMode)
           : "unknown";
-      setAssets(safeAssets);
+      // Apply cache-busters so replaced assets force the browser to
+      // re-fetch the new bytes (Blob overwrite at same path = same URL).
+      setAssets(normalizeAssets(safeAssets));
       setUploadMode(safeMode);
       setLastError(null);
       console.log(
@@ -172,15 +204,18 @@ export default function AssetProvider({
           return;
         }
 
-        // Optimistic local update — give the user instant feedback.
-        // The `?v=` cache-bust matters mostly for the filesystem branch.
+        // Optimistic local update — instant feedback for the admin.
+        // Cache-bust the URL so the <img> / <video> tag refetches the
+        // new bytes even though the Blob URL is identical to the previous
+        // upload at the same path.
+        const newEntry: AssetEntry = withCacheBust({
+          url: json.url!,
+          type: json.type ?? "image",
+          uploadedAt: json.uploadedAt ?? Date.now(),
+        });
         setAssets((prev) => ({
           ...prev,
-          [slot]: {
-            url: json.url!,
-            type: json.type ?? "image",
-            uploadedAt: json.uploadedAt ?? Date.now(),
-          },
+          [slot]: newEntry,
         }));
         console.log(
           "[media-admin] upload_success",
