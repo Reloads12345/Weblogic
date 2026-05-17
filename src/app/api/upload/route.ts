@@ -51,7 +51,8 @@ interface ManifestEntry {
 }
 type Manifest = Record<string, ManifestEntry>;
 
-const MANIFEST_BLOB_KEY = "manifest.json";
+// Canonical manifest path in Vercel Blob. Stable across redeploys.
+const MANIFEST_BLOB_KEY = "media/manifest.json";
 
 /* ─────────────────────── Storage backends ─────────────────────── */
 
@@ -153,22 +154,35 @@ export async function GET() {
 /* ─────────────────────── POST (upload) ─────────────────────── */
 
 export async function POST(req: NextRequest) {
+  console.log("[media] upload_received");
   if (IS_VERCEL && !HAS_BLOB_TOKEN) return productionUnconfigured();
 
   try {
     const form = await req.formData();
     const file = form.get("file");
-    const slotRaw = form.get("slot");
+    // Accept both `slot` (legacy) and `slotId` (spec'd) field names.
+    const slotRaw =
+      form.get("slotId") ??
+      form.get("slot");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Missing file" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing file" },
+        { status: 400 },
+      );
     }
-    if (typeof slotRaw !== "string") {
-      return NextResponse.json({ error: "Missing slot" }, { status: 400 });
+    if (typeof slotRaw !== "string" || !slotRaw.trim()) {
+      return NextResponse.json(
+        { error: "Missing slotId" },
+        { status: 400 },
+      );
     }
     const slot = safeSlot(slotRaw);
     if (!slot) {
-      return NextResponse.json({ error: "Invalid slot" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid slotId" },
+        { status: 400 },
+      );
     }
 
     const isVideo = VALID_VIDEO.includes(file.type);
@@ -194,12 +208,15 @@ export async function POST(req: NextRequest) {
 
     if (IS_VERCEL && HAS_BLOB_TOKEN) {
       /* ─── Vercel Blob upload ─── */
-      // Delete previous file at this slot key (any extension) so we don't
-      // accumulate orphans. List by slot prefix.
+      // Files live under media/{slot}.{ext} so the manifest + assets share
+      // a tidy prefix and we can list/clean orphans efficiently.
+      const blobPath = `media/${filename}`;
+
+      // Delete previous file at this slot key (any extension).
       try {
-        const { blobs } = await list({ prefix: slot });
+        const { blobs } = await list({ prefix: `media/${slot}.` });
         for (const b of blobs) {
-          if (b.pathname.startsWith(`${slot}.`)) {
+          if (b.pathname !== blobPath) {
             await del(b.url).catch(() => {});
           }
         }
@@ -207,12 +224,13 @@ export async function POST(req: NextRequest) {
         // listing failures are non-fatal — worst case we have an orphan
       }
 
-      const blob = await put(filename, file, {
+      const blob = await put(blobPath, file, {
         access: "public",
         contentType: file.type,
         addRandomSuffix: false,
         allowOverwrite: true,
       });
+      console.log("[media] blob_upload_success", JSON.stringify({ slot, path: blobPath }));
 
       entry = {
         url: blob.url,
@@ -240,10 +258,25 @@ export async function POST(req: NextRequest) {
     const manifest = await readManifest();
     manifest[slot] = entry;
     await writeManifest(manifest);
+    console.log("[media] manifest_save_success", JSON.stringify({ slot }));
+    console.log("[media] upload_complete", JSON.stringify({ slot, type: entry.type }));
 
-    return NextResponse.json({ ok: true, slot, ...entry });
+    return NextResponse.json({
+      ok: true,
+      slot,
+      slotId: slot,
+      url: entry.url,
+      pathname:
+        IS_VERCEL && HAS_BLOB_TOKEN ? `media/${filename}` : entry.url,
+      filename,
+      contentType: file.type,
+      size: file.size,
+      type: entry.type,
+      uploadedAt: entry.uploadedAt,
+      source: IS_VERCEL && HAS_BLOB_TOKEN ? "vercel-blob" : "filesystem",
+    });
   } catch (err) {
-    console.error("[upload] error:", err);
+    console.error("[media] upload_failed", err);
     return NextResponse.json(
       { error: "Upload failed. See server logs." },
       { status: 500 },
