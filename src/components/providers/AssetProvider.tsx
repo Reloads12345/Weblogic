@@ -188,6 +188,8 @@ export default function AssetProvider({
           url?: string;
           type?: "image" | "video" | "document";
           uploadedAt?: number;
+          manifest?: AssetMap;
+          mode?: UploadMode;
           error?: string;
           code?: string;
         };
@@ -204,26 +206,32 @@ export default function AssetProvider({
           return;
         }
 
-        // Optimistic local update — instant feedback for the admin.
-        // Cache-bust the URL so the <img> / <video> tag refetches the
-        // new bytes even though the Blob URL is identical to the previous
-        // upload at the same path.
-        const newEntry: AssetEntry = withCacheBust({
-          url: json.url!,
-          type: json.type ?? "image",
-          uploadedAt: json.uploadedAt ?? Date.now(),
-        });
-        setAssets((prev) => ({
-          ...prev,
-          [slot]: newEntry,
-        }));
+        // The server returns the FULL authoritative manifest in the same
+        // response — no follow-up GET needed. Eliminates the stale-read
+        // race that was wiping uploads after they succeeded.
+        if (
+          json.manifest &&
+          typeof json.manifest === "object" &&
+          !Array.isArray(json.manifest)
+        ) {
+          setAssets(normalizeAssets(json.manifest));
+          if (json.mode) setUploadMode(json.mode);
+        } else {
+          // Fallback if the server response is missing the manifest (e.g.
+          // legacy server, transient error). Optimistically write the new
+          // entry into local state — at least the slot we just uploaded
+          // will render correctly until next refresh.
+          const newEntry: AssetEntry = withCacheBust({
+            url: json.url!,
+            type: json.type ?? "image",
+            uploadedAt: json.uploadedAt ?? Date.now(),
+          });
+          setAssets((prev) => ({ ...prev, [slot]: newEntry }));
+        }
         console.log(
           "[media-admin] upload_success",
           JSON.stringify({ slot, type: json.type }),
         );
-
-        // Authoritative refetch so the cached manifest matches storage exactly.
-        await refreshManifest();
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";
         setLastError(msg);
@@ -232,35 +240,44 @@ export default function AssetProvider({
         setIsUploading(null);
       }
     },
-    [refreshManifest],
+    [],
   );
 
-  const clearAsset = useCallback(
-    async (slot: string) => {
-      setLastError(null);
-      try {
-        const res = await fetch(
-          `/api/upload?slot=${encodeURIComponent(slot)}`,
-          { method: "DELETE" },
-        );
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({ error: "" }));
-          setLastError(json.error || `Delete failed (HTTP ${res.status})`);
-          return;
-        }
+  const clearAsset = useCallback(async (slot: string) => {
+    setLastError(null);
+    try {
+      const res = await fetch(
+        `/api/upload?slot=${encodeURIComponent(slot)}`,
+        { method: "DELETE" },
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        manifest?: AssetMap;
+        error?: string;
+      };
+      if (!res.ok) {
+        setLastError(json.error || `Delete failed (HTTP ${res.status})`);
+        return;
+      }
+      // Trust the manifest from the response (same race-fix as setAsset).
+      if (
+        json.manifest &&
+        typeof json.manifest === "object" &&
+        !Array.isArray(json.manifest)
+      ) {
+        setAssets(normalizeAssets(json.manifest));
+      } else {
         setAssets((prev) => {
           const next = { ...prev };
           delete next[slot];
           return next;
         });
-        await refreshManifest();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Delete failed";
-        setLastError(msg);
       }
-    },
-    [refreshManifest],
-  );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Delete failed";
+      setLastError(msg);
+    }
+  }, []);
 
   const getVideoUrl = useCallback(
     (slot: string) => {

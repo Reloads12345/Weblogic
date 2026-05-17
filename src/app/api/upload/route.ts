@@ -266,6 +266,10 @@ export async function POST(req: NextRequest) {
     console.log("[media] manifest_save_success", JSON.stringify({ slot }));
     console.log("[media] upload_complete", JSON.stringify({ slot, type: entry.type }));
 
+    // Return the FULL updated manifest in the same response so the client
+    // doesn't have to do a follow-up GET that might hit a stale Blob edge
+    // read. This eliminates the race that caused "upload didn't go
+    // through, refresh fixes it" — there's no second round-trip to lose.
     return NextResponse.json({
       ok: true,
       slot,
@@ -277,6 +281,8 @@ export async function POST(req: NextRequest) {
       contentType: file.type,
       size: file.size,
       type: entry.type,
+      manifest,
+      mode: IS_VERCEL ? "vercel-blob" : "fs",
       uploadedAt: entry.uploadedAt,
       source: IS_VERCEL && HAS_BLOB_TOKEN ? "vercel-blob" : "filesystem",
     });
@@ -320,5 +326,11 @@ export async function DELETE(req: NextRequest) {
 
   delete manifest[slot];
   await writeManifest(manifest);
-  return NextResponse.json({ ok: true });
+  // Same pattern as POST — return the authoritative manifest so the
+  // client doesn't need a second read that could be stale.
+  return NextResponse.json({
+    ok: true,
+    manifest,
+    mode: IS_VERCEL ? "vercel-blob" : "fs",
+  });
 }
