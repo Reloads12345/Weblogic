@@ -86,13 +86,22 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      // Modern browsers — SVG favicon scales crisply at every size.
       { url: "/icons/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icons/favicon.svg",
+    apple: [
+      // iOS Home Screen falls back to this when adding "to Home Screen".
+      // It also reads our SVG; if a user wants pixel-perfect iOS rendering
+      // they can later drop a 180×180 PNG at /icons/apple-touch-icon.png
+      // and Next.js will auto-prefer that.
+      { url: "/icons/favicon.svg" },
     ],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#020410",
   width: "device-width",
   initialScale: 1,
   colorScheme: "dark",

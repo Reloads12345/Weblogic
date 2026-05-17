@@ -1,1 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#000"/><path d="M7 10 L11 22 L15 14 L19 22 L23 10" stroke="#0052ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="16" cy="6" r="1.6" fill="#0052ff"/></svg>
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="64"
+  height="64"
+  viewBox="0 0 64 64"
+  fill="none"
+  role="img"
+  aria-label="WebLogic"
+>
+  <!-- Dark navy rounded-square background — matches the WebLogic brand mark -->
+  <rect width="64" height="64" rx="14" fill="#020410" />
+
+  <!-- Left bracket [ (lighter electric blue) -->
+  <path
+    d="M14 16h12v4h-8v24h8v4H14V16z"
+    fill="#1d6efb"
+  />
+
+  <!-- Right bracket ] (slightly cooler electric blue, mirroring the icon) -->
+  <path
+    d="M50 16H38v4h8v24h-8v4h12V16z"
+    fill="#4d96ff"
+  />
+
+  <!-- Centre </> code symbol -->
+  <g
+    stroke="#2d7dff"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  >
+    <!-- < -->
+    <polyline points="28,24 22,32 28,40" />
+    <!-- / -->
+    <line x1="35" y1="22" x2="29" y2="42" />
+    <!-- > -->
+    <polyline points="38,24 44,32 38,40" />
+  </g>
+</svg>
