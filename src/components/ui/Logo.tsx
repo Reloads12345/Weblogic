@@ -20,10 +20,16 @@ interface Props {
  */
 const heightClass = {
   sm: "h-6 w-auto max-w-[88px]",
-  // Used by every site Header. Standard premium header size.
-  md: "h-7 w-auto max-w-[120px] md:h-9 md:max-w-[160px]",
-  lg: "h-8 w-auto max-w-[140px] md:h-10 md:max-w-[180px]",
-  // Footer wordmark — a touch bigger
+  // Header default. Mobile stays compact (so the wordmark never breaks the
+  // flex row on a phone), then expands ~+200px at md and ~+400px at lg.
+  //   mobile: ~140px wide
+  //   md:    ~352px wide  (h-20 × 4.4 wordmark aspect)
+  //   lg:    ~560px wide  (h-32 × 4.4, capped by max-w)
+  // The lg height (128px) extends below the 88px header bar — overflow
+  // lands in the section's pt-40 padding, so no content is covered.
+  md: "h-10 w-auto max-w-[200px] md:h-20 md:max-w-[360px] lg:h-32 lg:max-w-[560px]",
+  lg: "h-10 w-auto max-w-[200px] md:h-20 md:max-w-[360px] lg:h-32 lg:max-w-[560px]",
+  // Footer wordmark — a touch bigger than the slimmest size
   xl: "h-10 w-auto max-w-[180px] md:h-12 md:max-w-[220px]",
   // Reserved for the rare full-bleed brand visual on /about / discipline pages
   huge: "h-14 w-auto max-w-[280px] md:h-20 md:max-w-[400px] lg:h-24 lg:max-w-[480px]",
