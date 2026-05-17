@@ -12,14 +12,20 @@ interface Props {
 
 /**
  * Tailwind sizing for the WebLogic wordmark.
- * Each size locks BOTH a height and a max-width so the SVG/img can't blow
- * out the layout.
+ *
+ * Hard ceiling: NEVER bigger than ~180px wide on desktop. The wordmark
+ * PNG has a wide aspect ratio (~5:1), so even modest height values
+ * create wide elements. Anything larger than h-10 visibly competes with
+ * the nav and breaks the header. Locked here intentionally.
  */
 const heightClass = {
   sm: "h-6 w-auto max-w-[88px]",
-  md: "h-8 w-auto max-w-[140px] md:h-40 md:max-w-[720px] lg:h-44 lg:max-w-[800px]",
-  lg: "h-8 w-auto max-w-[140px] md:h-40 md:max-w-[720px] lg:h-44 lg:max-w-[800px]",
-  xl: "h-10 w-auto max-w-[200px] md:h-12 md:max-w-[240px]",
+  // Used by every site Header. Standard premium header size.
+  md: "h-7 w-auto max-w-[120px] md:h-9 md:max-w-[160px]",
+  lg: "h-8 w-auto max-w-[140px] md:h-10 md:max-w-[180px]",
+  // Footer wordmark — a touch bigger
+  xl: "h-10 w-auto max-w-[180px] md:h-12 md:max-w-[220px]",
+  // Reserved for the rare full-bleed brand visual on /about / discipline pages
   huge: "h-14 w-auto max-w-[280px] md:h-20 md:max-w-[400px] lg:h-24 lg:max-w-[480px]",
 } as const;
 

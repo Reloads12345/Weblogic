@@ -103,9 +103,24 @@ async function rateLimited(): Promise<boolean> {
 /* ----------------------- Entry point ----------------------- */
 
 export async function submitLead(input: LeadInput): Promise<SubmitResult> {
+  console.log("[lead] received");
+
+  // Boolean env check — log every time so we can diagnose prod from Vercel logs.
+  // Never logs the actual key values.
+  const envCheck = {
+    hasResendApiKey: Boolean(process.env.RESEND_API_KEY),
+    hasLeadFromEmail: Boolean(process.env.LEAD_FROM_EMAIL),
+    hasLeadToEmail: Boolean(process.env.LEAD_TO_EMAIL),
+    fromDomain: parseFromDomain(process.env.LEAD_FROM_EMAIL),
+    nodeEnv: process.env.NODE_ENV ?? "unknown",
+    vercel: process.env.VERCEL === "1",
+  };
+  console.log("[lead] env_check", JSON.stringify(envCheck));
+
   // 0) Honeypot — silently succeed so bots think they hit the form, but
   //    deliver nothing anywhere.
   if (typeof input.website === "string" && input.website.length > 0) {
+    console.log("[lead] honeypot_drop");
     return { ok: true, delivery: { email: false, webhook: false, log: false } };
   }
 
@@ -181,17 +196,22 @@ export async function submitLead(input: LeadInput): Promise<SubmitResult> {
 
       if (res.ok) {
         delivery.email = true;
+        console.log("[lead] resend_success");
       } else {
         const body = await res.text().catch(() => "");
-        console.error("[lead] Resend rejected:", res.status, body);
+        console.error(
+          "[lead] resend_failed",
+          JSON.stringify({ status: res.status, body }),
+        );
       }
     } catch (err) {
-      console.error("[lead] Resend send failed", err);
+      console.error(
+        "[lead] resend_failed",
+        err instanceof Error ? err.message : String(err),
+      );
     }
-  } else if (process.env.NODE_ENV !== "production") {
-    console.warn(
-      "[lead] Resend not configured. Set RESEND_API_KEY + LEAD_TO_EMAIL in env.",
-    );
+  } else {
+    console.warn("[lead] resend_skipped — RESEND_API_KEY not set");
   }
 
   // 5) Optional generic webhook (HubSpot / Salesforce / Slack / Make.com)
@@ -234,6 +254,17 @@ export async function submitLead(input: LeadInput): Promise<SubmitResult> {
 }
 
 /* ----------------------- Helpers ----------------------- */
+
+/**
+ * Pulls the bare domain (e.g. "weblogic.digital") out of a configured
+ * `LEAD_FROM_EMAIL` like `"WebLogic Support <support@weblogic.digital>"`.
+ * Returns null when nothing parseable is found. Never returns secrets.
+ */
+function parseFromDomain(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const match = raw.match(/@([\w.-]+\.[A-Za-z]{2,})/);
+  return match?.[1] ?? null;
+}
 
 function cryptoRandomId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

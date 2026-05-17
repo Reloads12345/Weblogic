@@ -11,7 +11,7 @@ export default function Loading() {
         className="fixed inset-x-0 z-[100] border-b border-white/8 bg-ink-0/80 backdrop-blur-xl"
       >
         <div className="container-pad flex h-[80px] items-center justify-between gap-4 md:h-[88px]">
-          <div className="h-8 w-[140px] rounded bg-white/[0.05] md:h-40 md:w-[720px] md:max-w-[60vw] lg:h-44 lg:w-[800px]" />
+          <div className="h-7 w-[120px] rounded bg-white/[0.05] md:h-9 md:w-[160px]" />
           <div className="absolute left-1/2 h-8 w-44 -translate-x-1/2 rounded-full bg-white/[0.04] md:h-10 md:w-56" />
           <div className="h-9 w-32 rounded-full bg-white/[0.04]" />
         </div>
