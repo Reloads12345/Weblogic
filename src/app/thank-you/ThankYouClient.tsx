@@ -28,7 +28,13 @@ import { BRAND } from "@/lib/data";
    (no `type`)          → lead-form submission (existing default)
    ────────────────────────────────────────────────────────────── */
 
-type FlowType = "project" | "audit" | "custom" | "subscription" | "lead";
+type FlowType =
+  | "project"
+  | "audit"
+  | "custom"
+  | "subscription"
+  | "lead-checkout-fallback"
+  | "lead";
 
 interface FlowCopy {
   eyebrow: string;
@@ -152,6 +158,43 @@ function copyFor(type: FlowType): FlowCopy {
         ],
         cta: { label: "Return home", href: "/" },
       };
+    case "lead-checkout-fallback":
+      return {
+        eyebrow: "Details received",
+        headline: (
+          <>
+            Got your details.{" "}
+            <span className="text-mute">Caleb will follow up shortly.</span>
+          </>
+        ),
+        subhead:
+          "Our payment system hit a snag for this configuration, but we have everything we need to finish it manually. Expect an email from caleb@weblogic.digital within one business day with a secure payment link.",
+        stepsHeading: "What happens next",
+        steps: [
+          {
+            icon: MessageSquare,
+            n: "01",
+            title: "Caleb reviews your selection",
+            body: "Your package, add-ons, and contact details landed in our inbox. We confirm the scope and write back today or tomorrow.",
+            when: "Within 24 hours",
+          },
+          {
+            icon: FileText,
+            n: "02",
+            title: "Secure payment link sent",
+            body: "We email a personal Stripe payment link for your deposit — same secure flow, just hand-checked.",
+            when: "Same email thread",
+          },
+          {
+            icon: Clock,
+            n: "03",
+            title: "Project kickoff",
+            body: "Once the deposit clears, planning + design start the next business day.",
+            when: "After payment",
+          },
+        ],
+        cta: { label: "Return home", href: "/" },
+      };
     case "subscription":
       return {
         eyebrow: "Care plan active",
@@ -236,7 +279,8 @@ export default function ThankYouClient() {
     rawType === "project" ||
     rawType === "audit" ||
     rawType === "custom" ||
-    rawType === "subscription"
+    rawType === "subscription" ||
+    rawType === "lead-checkout-fallback"
       ? rawType
       : "lead";
 

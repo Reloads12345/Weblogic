@@ -16,6 +16,9 @@ export async function generateStaticParams() {
 // (any project the admin adds later still gets a working /work/[slug] page).
 export const dynamicParams = true;
 
+// ISR — case studies are mostly static. Edge-cache for an hour.
+export const revalidate = 3600;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const items = await getWorkItems();

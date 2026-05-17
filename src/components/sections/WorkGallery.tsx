@@ -201,15 +201,27 @@ export default function WorkGallery({ items: rawItems }: { items: CaseStudy[] })
 
 function WorkCard({ cs }: { cs: CaseStudy }) {
   const { getImageUrl, getVideoUrl } = useAssets();
+
+  /**
+   * Thumbnail resolution priority:
+   *   1. Fresh upload via admin (AssetProvider manifest) — dev only
+   *   2. Static committed asset at /media/work/[slug]-thumbnail.png — prod-safe
+   *   3. <img onError> swaps to <BrowserPlaceholder> so we never show a
+   *      broken image icon
+   */
+  const STATIC_THUMB = `/media/work/${cs.slug}-thumbnail.png`;
   const thumb =
     getImageUrl(`work-${cs.slug}-thumbnail`) ??
-    getImageUrl(`case-${cs.slug}-image`);
+    getImageUrl(`case-${cs.slug}-image`) ??
+    STATIC_THUMB;
+
   const video =
     getVideoUrl(`work-${cs.slug}-video`) ?? getVideoUrl(cs.videoSlot);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hovered, setHovered] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
 
   // Respect the OS / browser reduced-motion preference — never auto-play
   // hover previews for users who've opted out of motion.
@@ -267,12 +279,14 @@ function WorkCard({ cs }: { cs: CaseStudy }) {
     >
       {/* MEDIA — image first, video on hover */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-ink-100">
-        {thumb ? (
+        {thumb && !thumbFailed ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={thumb}
             alt={`${cs.client} screenshot`}
             loading="lazy"
+            decoding="async"
+            onError={() => setThumbFailed(true)}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
             draggable={false}
           />

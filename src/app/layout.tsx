@@ -106,13 +106,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <head>
         {/* Preload the brand logo — it's above-the-fold on every route,
-            so we want the browser to start fetching it the moment the
-            HTML arrives, in parallel with everything else. Kills the
-            flash where the SVG fallback paints before the real logo. */}
+            so the browser starts fetching it the moment HTML arrives, in
+            parallel with everything else. Path is /brand/ (committed) not
+            /uploads/ (gitignored) so production never 404s. */}
         <link
           rel="preload"
           as="image"
-          href="/uploads/logo.png"
+          href="/brand/logo.png"
           fetchPriority="high"
         />
       </head>

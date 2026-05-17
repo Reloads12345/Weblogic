@@ -24,24 +24,29 @@ const heightClass = {
 } as const;
 
 /**
- * Static path to the uploaded logo. The asset is committed to
- * /public/uploads/ so it ships with every deploy and is fetched in
- * parallel with the HTML — no client-side manifest hydration step, no
- * flash of the SVG fallback before the image swaps in.
+ * Static path to the WebLogic wordmark. Served from /public/brand/ which
+ * is committed to Git (unlike /public/uploads/, which is gitignored and
+ * therefore missing on every Vercel deploy — that was the source of the
+ * giant "[WebLogic]" flash on production).
  *
- * If the file is missing (rare — only if someone deletes it), the
- * `onError` handler swaps to the inline SvgLogo wordmark, so there's
- * still always *something* in the header.
+ * If the file is somehow missing the `onError` handler swaps to the
+ * inline SvgLogo, so the header is never blank.
  */
-const LOGO_SRC = "/uploads/logo.png";
+const LOGO_SRC = "/brand/logo.png";
 
 export default function Logo({ className, size = "md" }: Props) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
+    // SVG fallback is intentionally capped to a small footprint regardless
+    // of the requested size — so a 404 on the PNG never blows out the
+    // header with a giant "[WebLogic]" placeholder.
     return (
       <span
-        className={cn("inline-flex items-center", heightClass[size], className)}
+        className={cn(
+          "inline-flex items-center h-8 w-auto max-w-[140px] md:h-10 md:max-w-[160px]",
+          className,
+        )}
       >
         <SvgLogo />
       </span>

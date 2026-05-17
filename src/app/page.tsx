@@ -11,6 +11,12 @@ import WorkGallery from "@/components/sections/WorkGallery";
 import { TESTIMONIALS } from "@/lib/data";
 import { getWorkItems } from "@/lib/work-store";
 
+/* ISR: regenerate the homepage at most every hour. Without this, every
+ * single visit re-runs `getWorkItems()` server-side (fs read) and pays
+ * the Lambda cold-start tax → TTFB blows past 1s. With ISR the page is
+ * pre-rendered + served from the edge cache → TTFB drops to 100-300ms. */
+export const revalidate = 3600;
+
 /**
  * Below-fold sections are dynamic-imported so they don't bloat the initial
  * JS bundle. They still render server-side (no `ssr: false`) — Next.js just
