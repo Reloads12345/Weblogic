@@ -15,6 +15,7 @@ import MagneticCursor from "@/components/ui/MagneticCursor";
 import StickyCta from "@/components/ui/StickyCta";
 import ExitIntent from "@/components/ui/ExitIntent";
 import AnnouncementBar from "@/components/ui/AnnouncementBar";
+import BuildMarker from "@/components/providers/BuildMarker";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -98,6 +99,14 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Resolved at build time by Vercel — surfaced in the browser console so you
+  // can confirm which deployment is being served.
+  const commit =
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+    process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+    null;
+  const buildTime = new Date().toISOString();
+
   return (
     <html
       lang="en"
@@ -117,6 +126,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-ink-0 text-bone antialiased" suppressHydrationWarning>
+        <BuildMarker commit={commit} buildTime={buildTime} />
         <PersonalizationProvider>
           <AssetProvider>
             <SoundProvider>
