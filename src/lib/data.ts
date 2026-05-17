@@ -45,14 +45,10 @@ export interface SocialLink {
 
 export const SOCIAL_LINKS: SocialLink[] = [
   {
-    // GitHub profile not live yet. Button stays in the row for visual
-    // consistency; clicking it opens the placeholder URL in a new tab
-    // (no broken-link error). Flip `placeholder: false` and update href
-    // once the GitHub org is created.
     key: "github",
-    label: "GitHub (coming soon)",
-    href: "#",
-    placeholder: true,
+    label: "GitHub",
+    href: "https://github.com/WebLogic-dev",
+    placeholder: false,
   },
   {
     key: "linkedin",
