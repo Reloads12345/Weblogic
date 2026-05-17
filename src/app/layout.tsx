@@ -86,16 +86,19 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      // Modern browsers — SVG favicon scales crisply at every size.
-      { url: "/icons/favicon.svg", type: "image/svg+xml" },
+      // Single SVG covers every browser size. `sizes: "any"` tells browsers
+      // not to bother requesting a 16/32 PNG fallback. The `?v=` is a
+      // cache-buster — browsers are notoriously aggressive about caching
+      // favicons across sessions; bumping this string forces a refetch
+      // on the next visit after a redeploy.
+      { url: "/icons/favicon.svg?v=2", type: "image/svg+xml", sizes: "any" },
     ],
-    shortcut: "/icons/favicon.svg",
+    shortcut: "/icons/favicon.svg?v=2",
     apple: [
-      // iOS Home Screen falls back to this when adding "to Home Screen".
-      // It also reads our SVG; if a user wants pixel-perfect iOS rendering
-      // they can later drop a 180×180 PNG at /icons/apple-touch-icon.png
-      // and Next.js will auto-prefer that.
-      { url: "/icons/favicon.svg" },
+      // iOS Home Screen — same SVG. For pixel-perfect retina rendering
+      // drop a 180×180 PNG at /icons/apple-touch-icon.png and Next will
+      // auto-prefer it.
+      { url: "/icons/favicon.svg?v=2" },
     ],
   },
 };

@@ -7,34 +7,34 @@
   role="img"
   aria-label="WebLogic"
 >
-  <!-- Dark navy rounded-square background — matches the WebLogic brand mark -->
+  <!-- Dark navy rounded-square background -->
   <rect width="64" height="64" rx="14" fill="#020410" />
 
-  <!-- Left bracket [ (lighter electric blue) -->
+  <!-- LEFT bracket [ — larger + thicker so it survives 16px tab rendering -->
   <path
-    d="M14 16h12v4h-8v24h8v4H14V16z"
+    d="M10 12h14v6h-8v28h8v6H10V12z"
     fill="#1d6efb"
   />
 
-  <!-- Right bracket ] (slightly cooler electric blue, mirroring the icon) -->
+  <!-- RIGHT bracket ] — slightly lighter blue, mirrors the left -->
   <path
-    d="M50 16H38v4h8v24h-8v4h12V16z"
+    d="M54 12H40v6h8v28h-8v6h14V12z"
     fill="#4d96ff"
   />
 
-  <!-- Centre </> code symbol -->
+  <!-- </> code mark — only visible at 32px+, but adds detail on retina tabs -->
   <g
-    stroke="#2d7dff"
-    stroke-width="2.4"
+    stroke="#3b8bff"
+    stroke-width="2.6"
     stroke-linecap="round"
     stroke-linejoin="round"
     fill="none"
   >
     <!-- < -->
-    <polyline points="28,24 22,32 28,40" />
-    <!-- / -->
+    <polyline points="28,24 22.5,32 28,40" />
+    <!-- / slash -->
     <line x1="35" y1="22" x2="29" y2="42" />
     <!-- > -->
-    <polyline points="38,24 44,32 38,40" />
+    <polyline points="36,24 41.5,32 36,40" />
   </g>
 </svg>
