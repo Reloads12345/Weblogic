@@ -36,7 +36,7 @@ const FILTERS: Filter[] = [
  * Mode helpers — translate the server-reported upload mode
  * into something the admin can read at a glance.
  * ────────────────────────────────────────────────────────── */
-function ModeBadge({ mode }: { mode: UploadMode }) {
+function ModeBadge({ mode }: { mode: UploadMode | string | undefined }) {
   const map: Record<
     UploadMode,
     {
@@ -77,7 +77,13 @@ function ModeBadge({ mode }: { mode: UploadMode }) {
       help: "Querying server for storage mode.",
     },
   };
-  const m = map[mode];
+  // Defensive fallback — if the server returns an unexpected mode string
+  // we render the "unknown" badge instead of crashing the whole admin page.
+  // Previously this line was `const m = map[mode]` which threw
+  // "Cannot read properties of undefined (reading 'icon')" when the
+  // server's `mode` value didn't match a key in the map.
+  const safeMode = (mode && mode in map ? mode : "unknown") as UploadMode;
+  const m = map[safeMode] ?? map.unknown;
   const Icon = m.icon;
   return (
     <span
@@ -88,7 +94,7 @@ function ModeBadge({ mode }: { mode: UploadMode }) {
       title={m.help}
     >
       <Icon
-        className={`h-3.5 w-3.5${mode === "unknown" ? " animate-spin" : ""}`}
+        className={`h-3.5 w-3.5${safeMode === "unknown" ? " animate-spin" : ""}`}
       />
       {m.label}
     </span>

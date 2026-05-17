@@ -85,18 +85,37 @@ export default function AssetProvider({
         console.error("[media-admin] manifest_load_failed", res.status, body);
         return;
       }
-      const data = (await res.json()) as {
-        assets?: AssetMap;
-        mode?: UploadMode;
+      const raw = (await res.json().catch(() => ({}))) as {
+        assets?: unknown;
+        mode?: unknown;
       };
-      setAssets(data.assets ?? {});
-      setUploadMode(data.mode ?? "unknown");
+      // Defensive normalisation — never trust the server response shape
+      // to be exactly what the UI expects. A malformed body here used to
+      // be enough to crash the entire /admin tree.
+      const safeAssets: AssetMap =
+        raw && typeof raw.assets === "object" && raw.assets !== null
+          ? (raw.assets as AssetMap)
+          : {};
+      const KNOWN_MODES: UploadMode[] = [
+        "vercel-blob",
+        "fs",
+        "disabled",
+        "no-blob-token",
+        "unknown",
+      ];
+      const safeMode: UploadMode =
+        typeof raw.mode === "string" &&
+        (KNOWN_MODES as string[]).includes(raw.mode)
+          ? (raw.mode as UploadMode)
+          : "unknown";
+      setAssets(safeAssets);
+      setUploadMode(safeMode);
       setLastError(null);
       console.log(
         "[media-admin] manifest_loaded",
         JSON.stringify({
-          mode: data.mode,
-          count: Object.keys(data.assets ?? {}).length,
+          mode: safeMode,
+          count: Object.keys(safeAssets).length,
         }),
       );
     } catch (err) {

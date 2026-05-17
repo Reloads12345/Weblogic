@@ -147,7 +147,12 @@ export async function GET() {
   const manifest = await readManifest();
   return NextResponse.json({
     assets: manifest,
-    mode: IS_VERCEL ? "blob" : "fs",
+    // String values here MUST stay in lock-step with the UploadMode union
+    // in AssetProvider.tsx. "blob" used to be returned here — that didn't
+    // match the client's `"vercel-blob"` key in MediaClient's ModeBadge
+    // map, which caused a "Cannot read properties of undefined (reading
+    // 'icon')" crash in the admin console.
+    mode: IS_VERCEL ? "vercel-blob" : "fs",
   });
 }
 
