@@ -8,30 +8,29 @@ export const dynamic = "force-dynamic";
 
 /* ─────────────────────── Strategy ───────────────────────
  *
- * This route runs in TWO modes depending on the environment:
+ * NEW (after the "upload one video, another disappears" bug):
+ * we no longer store a separate manifest.json blob. Instead the
+ * manifest is DERIVED from listing the blob directory (production)
+ * or the filesystem (local). Vercel Blob's docs guarantee that
+ * `list()` is immediately consistent after a `put()`, so we never
+ * see a stale view — and we eliminate the read-modify-write race
+ * on the manifest file that was wiping entries when uploads
+ * happened in quick succession.
  *
- *   • PRODUCTION (Vercel) — files + manifest stored in Vercel Blob.
- *       Requires BLOB_READ_WRITE_TOKEN. Without it the route returns
- *       503 with an actionable message instead of crashing.
+ * Trade-off: we walk the directory on every request. With ~45
+ * slots this is microseconds; if we ever scale past hundreds we
+ * can move to Vercel KV.
  *
- *   • LOCAL DEV — files written to /public/uploads + manifest.json on
- *       disk, same as before. Lets you iterate quickly without burning
- *       Blob storage.
- *
- * The shape of the response is identical in both modes so the
- * AssetProvider client doesn't need to know which storage is active.
- *
- * Validation:
- *   - File type allowlist (images, video, PDF)
- *   - Size cap (30MB)
- *   - Slot key sanitized to [A-Za-z0-9_-]{1,64}
+ * Modes:
+ *   • Vercel + BLOB_READ_WRITE_TOKEN → blob storage
+ *   • Local dev → /public/uploads filesystem
+ *   • Vercel without token → returns 503 with actionable message
  */
 
 const IS_VERCEL = process.env.VERCEL === "1";
 const HAS_BLOB_TOKEN = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
-const MANIFEST = path.join(UPLOAD_DIR, "manifest.json");
 
 const VALID_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
 const VALID_IMAGE = [
@@ -51,57 +50,84 @@ interface ManifestEntry {
 }
 type Manifest = Record<string, ManifestEntry>;
 
-// Canonical manifest path in Vercel Blob. Stable across redeploys.
-const MANIFEST_BLOB_KEY = "media/manifest.json";
+const BLOB_PREFIX = "media/";
 
-/* ─────────────────────── Storage backends ─────────────────────── */
+/* ─────────────────────── Derivation (the fix) ─────────────────────── */
 
-async function readManifestFs(): Promise<Manifest> {
-  try {
-    const buf = await fs.readFile(MANIFEST, "utf8");
-    return JSON.parse(buf) as Manifest;
-  } catch {
-    return {};
+function inferTypeFromExt(ext: string): ManifestEntry["type"] {
+  const e = ext.toLowerCase();
+  if (["mp4", "webm", "mov"].includes(e)) return "video";
+  if (e === "pdf") return "document";
+  return "image";
+}
+
+/**
+ * Build the manifest from the actual storage state. There is no separate
+ * manifest file to read — the source of truth IS the directory listing,
+ * which Vercel Blob keeps immediately consistent after a put().
+ */
+async function buildManifest(): Promise<Manifest> {
+  if (IS_VERCEL && HAS_BLOB_TOKEN) {
+    return buildManifestFromBlob();
   }
+  return buildManifestFromFs();
 }
 
-async function writeManifestFs(m: Manifest) {
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  await fs.writeFile(MANIFEST, JSON.stringify(m, null, 2), "utf8");
-}
-
-async function readManifestBlob(): Promise<Manifest> {
+async function buildManifestFromBlob(): Promise<Manifest> {
+  const m: Manifest = {};
   try {
-    // Find the existing manifest blob (it lives at /manifest.json)
-    const { blobs } = await list({ prefix: MANIFEST_BLOB_KEY });
-    const entry = blobs.find((b) => b.pathname === MANIFEST_BLOB_KEY);
-    if (!entry) return {};
-    const res = await fetch(entry.url, { cache: "no-store" });
-    if (!res.ok) return {};
-    return (await res.json()) as Manifest;
+    const { blobs } = await list({ prefix: BLOB_PREFIX, limit: 1000 });
+    for (const b of blobs) {
+      // Strip the "media/" prefix
+      const filename = b.pathname.startsWith(BLOB_PREFIX)
+        ? b.pathname.slice(BLOB_PREFIX.length)
+        : b.pathname;
+      // Skip any legacy manifest leftovers from the old architecture
+      if (filename === "manifest.json") continue;
+      const dotIdx = filename.lastIndexOf(".");
+      if (dotIdx <= 0) continue;
+      const slot = filename.slice(0, dotIdx);
+      const ext = filename.slice(dotIdx + 1);
+      if (!slot) continue;
+      const uploadedAt =
+        b.uploadedAt instanceof Date
+          ? b.uploadedAt.getTime()
+          : Date.now();
+      m[slot] = {
+        url: b.url,
+        type: inferTypeFromExt(ext),
+        uploadedAt,
+      };
+    }
   } catch (err) {
-    console.error("[upload] manifest read (blob) failed:", err);
-    return {};
+    console.error("[media] buildManifestFromBlob failed", err);
   }
+  return m;
 }
 
-async function writeManifestBlob(m: Manifest) {
-  await put(MANIFEST_BLOB_KEY, JSON.stringify(m, null, 2), {
-    access: "public",
-    contentType: "application/json",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
-}
-
-async function readManifest(): Promise<Manifest> {
-  if (IS_VERCEL && HAS_BLOB_TOKEN) return readManifestBlob();
-  return readManifestFs();
-}
-
-async function writeManifest(m: Manifest) {
-  if (IS_VERCEL && HAS_BLOB_TOKEN) return writeManifestBlob(m);
-  return writeManifestFs(m);
+async function buildManifestFromFs(): Promise<Manifest> {
+  const m: Manifest = {};
+  try {
+    const files = await fs.readdir(UPLOAD_DIR);
+    for (const f of files) {
+      if (f === "manifest.json" || f === ".gitkeep") continue;
+      const dotIdx = f.lastIndexOf(".");
+      if (dotIdx <= 0) continue;
+      const slot = f.slice(0, dotIdx);
+      const ext = f.slice(dotIdx + 1);
+      if (!slot) continue;
+      const full = path.join(UPLOAD_DIR, f);
+      const stat = await fs.stat(full).catch(() => null);
+      m[slot] = {
+        url: `/uploads/${f}`,
+        type: inferTypeFromExt(ext),
+        uploadedAt: stat?.mtimeMs ?? Date.now(),
+      };
+    }
+  } catch {
+    // upload dir doesn't exist yet — fine
+  }
+  return m;
 }
 
 /* ─────────────────────── Helpers ─────────────────────── */
@@ -139,19 +165,12 @@ function productionUnconfigured() {
 /* ─────────────────────── GET ─────────────────────── */
 
 export async function GET() {
-  // Reads work everywhere — local fs in dev, Blob in prod (if configured).
-  // On Vercel without a token we just return an empty registry.
   if (IS_VERCEL && !HAS_BLOB_TOKEN) {
     return NextResponse.json({ assets: {}, mode: "no-blob-token" });
   }
-  const manifest = await readManifest();
+  const manifest = await buildManifest();
   return NextResponse.json({
     assets: manifest,
-    // String values here MUST stay in lock-step with the UploadMode union
-    // in AssetProvider.tsx. "blob" used to be returned here — that didn't
-    // match the client's `"vercel-blob"` key in MediaClient's ModeBadge
-    // map, which caused a "Cannot read properties of undefined (reading
-    // 'icon')" crash in the admin console.
     mode: IS_VERCEL ? "vercel-blob" : "fs",
   });
 }
@@ -165,29 +184,17 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file");
-    // Accept both `slot` (legacy) and `slotId` (spec'd) field names.
-    const slotRaw =
-      form.get("slotId") ??
-      form.get("slot");
+    const slotRaw = form.get("slotId") ?? form.get("slot");
 
     if (!(file instanceof File)) {
-      return NextResponse.json(
-        { error: "Missing file" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
     if (typeof slotRaw !== "string" || !slotRaw.trim()) {
-      return NextResponse.json(
-        { error: "Missing slotId" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Missing slotId" }, { status: 400 });
     }
     const slot = safeSlot(slotRaw);
     if (!slot) {
-      return NextResponse.json(
-        { error: "Invalid slotId" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid slotId" }, { status: 400 });
     }
 
     const isVideo = VALID_VIDEO.includes(file.type);
@@ -208,25 +215,24 @@ export async function POST(req: NextRequest) {
 
     const ext = extFromMime(file.type);
     const filename = `${slot}.${ext}`;
-
     let entry: ManifestEntry;
 
     if (IS_VERCEL && HAS_BLOB_TOKEN) {
       /* ─── Vercel Blob upload ─── */
-      // Files live under media/{slot}.{ext} so the manifest + assets share
-      // a tidy prefix and we can list/clean orphans efficiently.
-      const blobPath = `media/${filename}`;
+      const blobPath = `${BLOB_PREFIX}${filename}`;
 
-      // Delete previous file at this slot key (any extension).
+      // Delete previous file at this slot with a DIFFERENT extension only.
+      // We never touch files belonging to OTHER slots — the prefix
+      // `media/${slot}.` (with trailing dot) only matches this exact slot.
       try {
-        const { blobs } = await list({ prefix: `media/${slot}.` });
+        const { blobs } = await list({ prefix: `${BLOB_PREFIX}${slot}.` });
         for (const b of blobs) {
           if (b.pathname !== blobPath) {
             await del(b.url).catch(() => {});
           }
         }
       } catch {
-        // listing failures are non-fatal — worst case we have an orphan
+        // listing failures are non-fatal
       }
 
       const blob = await put(blobPath, file, {
@@ -235,7 +241,10 @@ export async function POST(req: NextRequest) {
         addRandomSuffix: false,
         allowOverwrite: true,
       });
-      console.log("[media] blob_upload_success", JSON.stringify({ slot, path: blobPath }));
+      console.log(
+        "[media] blob_upload_success",
+        JSON.stringify({ slot, path: blobPath }),
+      );
 
       entry = {
         url: blob.url,
@@ -260,31 +269,29 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    const manifest = await readManifest();
-    manifest[slot] = entry;
-    await writeManifest(manifest);
-    console.log("[media] manifest_save_success", JSON.stringify({ slot }));
-    console.log("[media] upload_complete", JSON.stringify({ slot, type: entry.type }));
+    // Rebuild the manifest FROM STORAGE — guarantees no entries are
+    // dropped by a stale read of a separate manifest file.
+    const manifest = await buildManifest();
+    console.log(
+      "[media] upload_complete",
+      JSON.stringify({ slot, type: entry.type, totalSlots: Object.keys(manifest).length }),
+    );
 
-    // Return the FULL updated manifest in the same response so the client
-    // doesn't have to do a follow-up GET that might hit a stale Blob edge
-    // read. This eliminates the race that caused "upload didn't go
-    // through, refresh fixes it" — there's no second round-trip to lose.
     return NextResponse.json({
       ok: true,
       slot,
       slotId: slot,
       url: entry.url,
       pathname:
-        IS_VERCEL && HAS_BLOB_TOKEN ? `media/${filename}` : entry.url,
+        IS_VERCEL && HAS_BLOB_TOKEN ? `${BLOB_PREFIX}${filename}` : entry.url,
       filename,
       contentType: file.type,
       size: file.size,
       type: entry.type,
-      manifest,
-      mode: IS_VERCEL ? "vercel-blob" : "fs",
       uploadedAt: entry.uploadedAt,
       source: IS_VERCEL && HAS_BLOB_TOKEN ? "vercel-blob" : "filesystem",
+      manifest,
+      mode: IS_VERCEL ? "vercel-blob" : "fs",
     });
   } catch (err) {
     console.error("[media] upload_failed", err);
@@ -301,33 +308,33 @@ export async function DELETE(req: NextRequest) {
   if (IS_VERCEL && !HAS_BLOB_TOKEN) return productionUnconfigured();
 
   const url = new URL(req.url);
-  const slotRaw = url.searchParams.get("slot");
+  const slotRaw = url.searchParams.get("slot") ?? url.searchParams.get("slotId");
   if (!slotRaw) {
     return NextResponse.json({ error: "Missing slot" }, { status: 400 });
   }
   const slot = safeSlot(slotRaw);
 
-  const manifest = await readManifest();
-  const entry = manifest[slot];
-  if (!entry) {
-    return NextResponse.json({ ok: true, note: "nothing-to-delete" });
-  }
-
   try {
     if (IS_VERCEL && HAS_BLOB_TOKEN) {
-      await del(entry.url).catch(() => {});
+      // Delete every file (any extension) belonging to this slot.
+      const { blobs } = await list({ prefix: `${BLOB_PREFIX}${slot}.` });
+      for (const b of blobs) {
+        await del(b.url).catch(() => {});
+      }
     } else {
-      const filename = path.basename(entry.url);
-      await fs.unlink(path.join(UPLOAD_DIR, filename)).catch(() => {});
+      const files = await fs.readdir(UPLOAD_DIR).catch(() => []);
+      for (const f of files) {
+        if (f.startsWith(`${slot}.`)) {
+          await fs.unlink(path.join(UPLOAD_DIR, f)).catch(() => {});
+        }
+      }
     }
   } catch (err) {
-    console.error("[upload] delete failed:", err);
+    console.error("[media] delete failed:", err);
   }
 
-  delete manifest[slot];
-  await writeManifest(manifest);
-  // Same pattern as POST — return the authoritative manifest so the
-  // client doesn't need a second read that could be stale.
+  // Rebuild from storage so the client gets ground truth, not a stale read.
+  const manifest = await buildManifest();
   return NextResponse.json({
     ok: true,
     manifest,
