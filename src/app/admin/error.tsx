@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { reportError } from "@/lib/error-reporter";
 
 /**
  * Route-segment error boundary for every page under /admin.
@@ -23,8 +24,13 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Surface the actual stack to the browser console so we can grep it.
+    // Surface the actual stack to the browser console so we can grep it,
+    // and forward to the error reporter (Sentry-ready facade).
     console.error("[admin-error-boundary]", error);
+    reportError(error, {
+      route: "admin-route-boundary",
+      tags: { digest: error.digest ?? null },
+    });
   }, [error]);
 
   return (

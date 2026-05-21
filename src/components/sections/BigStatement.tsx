@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { useAssets } from "@/components/providers/AssetProvider";
 import { useLeadModal } from "@/components/ui/LeadModalProvider";
@@ -48,11 +49,13 @@ export default function BigStatement() {
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               {leftUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={leftUrl}
                   alt="Composable architecture visual"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  loading="lazy"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 />
               ) : (
                 <CompositionVisual />
@@ -90,11 +93,13 @@ export default function BigStatement() {
           >
             <div className="relative aspect-[4/3] overflow-hidden">
               {rightUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={rightUrl}
                   alt="WebLogic studio team"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  loading="lazy"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                 />
               ) : (
                 <TeamVisual />

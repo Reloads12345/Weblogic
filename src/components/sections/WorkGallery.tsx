@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Play } from "lucide-react";
@@ -280,14 +281,15 @@ function WorkCard({ cs }: { cs: CaseStudy }) {
       {/* MEDIA — image first, video on hover */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-ink-100">
         {thumb && !thumbFailed ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <Image
             src={thumb}
             alt={`${cs.client} screenshot`}
+            fill
+            // 88vw on mobile, 460/540 px on desktop — keep the request small.
+            sizes="(max-width: 768px) 88vw, 540px"
             loading="lazy"
-            decoding="async"
             onError={() => setThumbFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
             draggable={false}
           />
         ) : (

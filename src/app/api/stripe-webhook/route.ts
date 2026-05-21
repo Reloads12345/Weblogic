@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { reportError, reportWarning } from "@/lib/error-reporter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,12 @@ export async function POST(req: Request) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "signature failed";
     console.error("[stripe-webhook] signature_invalid", message);
+    // Signature failures are usually misconfigured webhooks, not attacks —
+    // warn-level so they don't pager-alert once real monitoring is wired.
+    reportWarning(err, {
+      route: "/api/stripe-webhook",
+      tags: { reason: "signature_invalid" },
+    });
     return NextResponse.json(
       { error: `Webhook signature failed: ${message}` },
       { status: 400 },
@@ -158,6 +165,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[stripe-webhook] handler_error", err);
+    reportError(err, {
+      route: "/api/stripe-webhook",
+      tags: { eventType: event.type, eventId: event.id },
+    });
     // Return 500 so Stripe retries — better than silently dropping.
     return NextResponse.json(
       { error: "Handler error, will retry" },

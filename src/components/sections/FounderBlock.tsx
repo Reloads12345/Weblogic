@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { useAssets } from "@/components/providers/AssetProvider";
@@ -30,11 +31,13 @@ export default function FounderBlock() {
           <div className="relative shrink-0">
             <div className="relative h-28 w-28 overflow-hidden rounded-full border border-white/12 bg-gradient-to-br from-electric/20 to-transparent md:h-36 md:w-36">
               {photo ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={photo}
                   alt="Caleb Gathu — Founder, WebLogic"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 768px) 112px, 144px"
+                  loading="lazy"
+                  className="object-cover"
                 />
               ) : (
                 <div className="absolute inset-0 grid place-items-center font-display text-3xl tracking-tightest text-bone/60 md:text-4xl">

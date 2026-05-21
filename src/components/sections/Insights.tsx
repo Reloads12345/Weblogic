@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight, Clock } from "lucide-react";
 import { POSTS } from "@/lib/data";
 import { useAssets } from "@/components/providers/AssetProvider";
@@ -55,12 +56,19 @@ export default function Insights() {
                 >
                   {coverUrl ? (
                     <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={coverUrl}
                         alt={p.title}
-                        loading={isHero ? "eager" : "lazy"}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                        fill
+                        // Hero card spans 6/12 cols, small cards span 3/12 on desktop.
+                        sizes={
+                          isHero
+                            ? "(max-width: 768px) 100vw, 50vw"
+                            : "(max-width: 768px) 100vw, 25vw"
+                        }
+                        priority={isHero}
+                        loading={isHero ? undefined : "lazy"}
+                        className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                       />
                       {/* Slight tint for legibility */}
                       <span

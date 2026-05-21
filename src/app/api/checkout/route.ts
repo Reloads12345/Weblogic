@@ -14,6 +14,7 @@ import {
   type CarePlanKey,
   type PackageKey,
 } from "@/lib/checkout-config";
+import { reportError } from "@/lib/error-reporter";
 
 /**
  * Lead-capture fallback. Called whenever Stripe can't actually create the
@@ -347,6 +348,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ redirectUrl: session.url });
   } catch (err) {
     console.error("[/api/checkout] Stripe error:", err);
+    reportError(err, {
+      route: "/api/checkout",
+      tags: { checkoutType: data.checkoutType },
+    });
     // Stripe API call failed (auth, network, invalid price, etc.). Capture
     // the lead so Caleb can follow up manually instead of losing it.
     const summary =

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -868,11 +869,13 @@ function FounderStory() {
           >
             <div className="relative aspect-square overflow-hidden rounded-3xl border border-white/10 bg-ink-50/40">
               {photo ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={photo}
                   alt="Caleb Gathu — founder of WebLogic"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 40vw"
+                  loading="lazy"
+                  className="object-cover"
                 />
               ) : (
                 <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-electric/20 via-ink-100 to-ink-0">

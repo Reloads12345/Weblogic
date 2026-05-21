@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorReporterBackend } from "@/lib/error-reporter";
 
 /**
  * GET /api/diagnostics
@@ -203,6 +204,13 @@ export async function GET() {
             ? "vercel-blob"
             : "disabled"
           : "filesystem",
+    },
+    monitoring: {
+      // "sentry" once SENTRY_DSN is set; "console" today.
+      backend: errorReporterBackend(),
+      hasSentryDsn: Boolean(
+        process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN,
+      ),
     },
 
     // ─────────────── ENV SCANNER ───────────────

@@ -13,10 +13,17 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion", "@react-three/drei"],
   },
   images: {
+    // Allow next/image to optimize remote sources we actually use. The Vercel
+    // Blob hostname pattern is `<store-id>.public.blob.vercel-storage.com` —
+    // the wildcard covers admin-uploaded media + future stores.
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "cdn.weblogic.example" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
+    // AVIF first, then WebP — modern browsers get the smaller format
+    // automatically, Safari falls back to WebP.
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     return [

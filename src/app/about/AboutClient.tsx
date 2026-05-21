@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import Header from "@/components/nav/Header";
@@ -203,8 +204,14 @@ export default function AboutClient() {
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {teamLeftUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={teamLeftUrl} alt="WebLogic build" className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                      src={teamLeftUrl}
+                      alt="WebLogic build"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      loading="lazy"
+                      className="object-cover"
+                    />
                   ) : (
                     <AbstractStack />
                   )}
@@ -238,11 +245,23 @@ export default function AboutClient() {
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {teamRightUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={teamRightUrl} alt="WebLogic studio" className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                      src={teamRightUrl}
+                      alt="WebLogic studio"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      loading="lazy"
+                      className="object-cover"
+                    />
                   ) : founderPhoto ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={founderPhoto} alt="Caleb Gathu" className="absolute inset-0 h-full w-full object-cover" />
+                    <Image
+                      src={founderPhoto}
+                      alt="Caleb Gathu"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      loading="lazy"
+                      className="object-cover"
+                    />
                   ) : (
                     <FounderVisual />
                   )}
