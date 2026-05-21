@@ -12,7 +12,8 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/", "/api/"],
+        // /portal/<token> is the per-client share URL — never indexable.
+        disallow: ["/admin", "/admin/", "/api/", "/portal", "/portal/"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

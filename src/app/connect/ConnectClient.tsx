@@ -22,6 +22,7 @@ import Header from "@/components/nav/Header";
 import Footer from "@/components/sections/Footer";
 import { useAssets } from "@/components/providers/AssetProvider";
 import SocialIcon from "@/components/ui/SocialIcon";
+import AuditWidget from "@/components/ui/AuditWidget";
 import { submitLead } from "@/app/actions/lead";
 import { BRAND, SOCIAL_LINKS } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -168,6 +169,15 @@ export default function ConnectClient() {
         <Showreel />
         <SelectedWork />
         <FounderStory />
+        {/* Live audit widget — sits above the lead form so high-intent
+            visitors get instant value (Lighthouse scores) before any
+            data ask. Email field is optional; if they fill it they get
+            a leadgen-quality email report. */}
+        <section className="border-t border-white/5 py-20 md:py-28">
+          <div className="container-pad mx-auto max-w-3xl">
+            <AuditWidget source="/connect inline audit-widget" />
+          </div>
+        </section>
         <AuditForm />
         <ContentSection />
         <FinalCTA />
