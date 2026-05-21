@@ -416,6 +416,28 @@ html[data-announcement-dismissed="true"] {
       transition-duration: 0.001s !important;
     }
   }
+
+  /* Mobile motion budget — phones don't have the GPU headroom for the long
+     cubic-bezier fades that look great on a Mac. We halve transition times
+     globally below 768px so scroll-driven sections settle quickly and stop
+     jittering on mid-range Android. */
+  @media (max-width: 768px) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 250ms !important;
+      animation-duration: 400ms !important;
+    }
+    /* Don't tamper with marquees — they NEED long durations or they spin too fast. */
+    .wl-marquee-ltr,
+    .wl-marquee-rtl,
+    [class*="animate-marquee"],
+    [data-keep-motion],
+    [data-keep-motion] * {
+      transition-duration: revert !important;
+      animation-duration: revert !important;
+    }
+  }
 }
 
 /* ============================================================

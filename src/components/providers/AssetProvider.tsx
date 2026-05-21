@@ -206,31 +206,43 @@ export default function AssetProvider({
           return;
         }
 
-        // The server returns the FULL authoritative manifest in the same
-        // response — no follow-up GET needed. Eliminates the stale-read
-        // race that was wiping uploads after they succeeded.
+        // The server returns the FULL authoritative manifest. We use it
+        // for OTHER slots' state, but for the SLOT WE JUST UPLOADED TO
+        // we always inject a fresh client-side timestamp.
+        //
+        // Why: Vercel Blob's `list()` (which the server uses to derive
+        // the manifest) can return a stale `uploadedAt` for a few hundred
+        // ms right after an overwrite — meaning the cache-bust suffix
+        // would match a value the browser has already cached, and the
+        // browser would serve the OLD image even though the new bytes
+        // are sitting at the same URL. A fresh client timestamp
+        // guarantees the URL is unique → cache miss → new bytes load.
+        const now = Date.now();
+        const responseUrl = json.url ?? "";
+        const freshEntry: AssetEntry = {
+          url: `${responseUrl}${responseUrl.includes("?") ? "&" : "?"}_v=${now}`,
+          type: json.type ?? "image",
+          uploadedAt: now,
+        };
+
         if (
           json.manifest &&
           typeof json.manifest === "object" &&
           !Array.isArray(json.manifest)
         ) {
-          setAssets(normalizeAssets(json.manifest));
+          // Normalize every other entry as usual, but force the just-
+          // uploaded slot to use our fresh timestamp.
+          const normalized = normalizeAssets(json.manifest as AssetMap);
+          normalized[slot] = freshEntry;
+          setAssets(normalized);
           if (json.mode) setUploadMode(json.mode);
         } else {
-          // Fallback if the server response is missing the manifest (e.g.
-          // legacy server, transient error). Optimistically write the new
-          // entry into local state — at least the slot we just uploaded
-          // will render correctly until next refresh.
-          const newEntry: AssetEntry = withCacheBust({
-            url: json.url!,
-            type: json.type ?? "image",
-            uploadedAt: json.uploadedAt ?? Date.now(),
-          });
-          setAssets((prev) => ({ ...prev, [slot]: newEntry }));
+          // No manifest in response — at least make sure this slot updates.
+          setAssets((prev) => ({ ...prev, [slot]: freshEntry }));
         }
         console.log(
           "[media-admin] upload_success",
-          JSON.stringify({ slot, type: json.type }),
+          JSON.stringify({ slot, type: json.type, v: now }),
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";
