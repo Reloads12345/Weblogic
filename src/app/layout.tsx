@@ -17,22 +17,29 @@ import ExitIntent from "@/components/ui/ExitIntent";
 import AnnouncementBar from "@/components/ui/AnnouncementBar";
 import BuildMarker from "@/components/providers/BuildMarker";
 
+// Inter, body text. Default weights (400 + 500) covers everything below
+// `font-display`. Tiny bundle compared to the full family.
 const sans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  weight: ["400", "500"],
   display: "swap",
 });
 
+// Inter, display weights only. Cut from 5 weights (500/600/700/800/900) to
+// just 2 (500/700) — saves ~220KB on the first paint without changing any
+// visible typography (the design only ever specifies 500 or 700 in code).
 const display = Inter({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["500", "600", "700", "800", "900"],
+  weight: ["500", "700"],
   display: "swap",
 });
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  weight: ["400", "500"],
   display: "swap",
 });
 

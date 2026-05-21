@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-import { CASE_STUDIES } from "@/lib/data";
-import { BRAND } from "@/lib/data";
+import { CASE_STUDIES, POSTS, BRAND } from "@/lib/data";
 
 /**
  * Sitemap — Next.js auto-serves this at /sitemap.xml.
@@ -44,6 +43,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    ...POSTS.map((p) => ({
+      url: `${base}/insights/${p.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
   ];
 }

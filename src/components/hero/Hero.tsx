@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUpRight } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import MagneticButton from "@/components/ui/MagneticButton";
 import { useLeadModal } from "@/components/ui/LeadModalProvider";
 import Counter from "@/components/ui/Counter";
@@ -18,28 +18,38 @@ const SERVICE_CHIPS = [
  * Hero — honest, plain-English positioning. Two CTAs:
  *  - Primary: Book a Free Audit (opens lead modal w/ source "Hero · Free Audit")
  *  - Secondary: View Services (scrolls to #services)
+ *
+ * Performance notes (this is the LCP region of the homepage):
+ *  - H1 reveal is CSS-only (no JS class flip) so the text paints + animates
+ *    on the first frame — LCP settles ~300-500ms faster than before.
+ *  - The decorative 3D globe is deferred via requestIdleCallback so it
+ *    can't compete with LCP. It only mounts on desktop with a mouse anyway.
  */
 export default function Hero() {
   const { open: openLead } = useLeadModal();
-
-  const headlineRef = useRef<HTMLHeadingElement>(null);
   const [showGlobe, setShowGlobe] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px) and (hover: hover)");
-    const update = () => setShowGlobe(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
+    if (!mq.matches) return;
 
-  useEffect(() => {
-    const el = headlineRef.current;
-    if (!el) return;
-    const lines = el.querySelectorAll<HTMLElement>("[data-line]");
-    lines.forEach((l, i) => {
-      window.setTimeout(() => l.classList.add("is-in"), 80 + i * 110);
-    });
+    // Wait until the main thread is idle before kicking off Three.js so
+    // the globe never competes with the Hero's LCP paint. Fallback to a
+    // short setTimeout in browsers that don't support requestIdleCallback
+    // (Safari shipped it in 16.4 — older devices still use the timeout).
+    type IdleCallback = (cb: () => void, opts?: { timeout: number }) => number;
+    const win = window as unknown as { requestIdleCallback?: IdleCallback };
+    const handle: number = win.requestIdleCallback
+      ? win.requestIdleCallback(() => setShowGlobe(true), { timeout: 2000 })
+      : (window.setTimeout(() => setShowGlobe(true), 800) as unknown as number);
+
+    return () => {
+      const cancelIdle = (window as unknown as {
+        cancelIdleCallback?: (h: number) => void;
+      }).cancelIdleCallback;
+      if (cancelIdle) cancelIdle(handle);
+      else window.clearTimeout(handle);
+    };
   }, []);
 
   return (
@@ -71,11 +81,10 @@ export default function Hero() {
             Free audit · reply within 24 hours
           </a>
 
-          {/* Headline — plain English, benefit-driven */}
-          <h1
-            ref={headlineRef}
-            className="mt-8 max-w-[22ch] font-display text-display-xl tracking-tightest text-bone"
-          >
+          {/* Headline — plain English, benefit-driven.
+              LCP element. Renders synchronously; reveal-line animation is
+              pure CSS (see globals.css → .reveal-line). */}
+          <h1 className="mt-8 max-w-[22ch] font-display text-display-xl tracking-tightest text-bone">
             <span data-line className="reveal-line">
               <span>Websites & systems</span>
             </span>

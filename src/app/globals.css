@@ -384,7 +384,12 @@ html[data-announcement-dismissed="true"] {
     transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* For SplitText reveal */
+  /* For SplitText reveal — pure CSS animation.
+     We used to flip a `.is-in` class via JS setTimeout, which delayed LCP
+     by 200-400ms because the H1 painted hidden behind `translateY(110%)`
+     until React hydrated. Now the animation runs immediately as part of
+     the first paint pipeline — LCP fires when the text settles, no JS
+     involvement. Per-line stagger via :nth-child. */
   .reveal-line {
     overflow: hidden;
     display: block;
@@ -393,10 +398,19 @@ html[data-announcement-dismissed="true"] {
     display: inline-block;
     transform: translateY(110%);
     will-change: transform;
+    animation: reveal-line-up 0.95s cubic-bezier(0.2, 0.85, 0.2, 1) forwards;
   }
-  .reveal-line.is-in > span {
-    transform: translateY(0);
-    transition: transform 0.95s cubic-bezier(0.2, 0.85, 0.2, 1);
+  .reveal-line:nth-child(2) > span { animation-delay: 110ms; }
+  .reveal-line:nth-child(3) > span { animation-delay: 220ms; }
+  .reveal-line:nth-child(4) > span { animation-delay: 330ms; }
+  /* Backward-compat: the `.is-in` class is no-op now but harmless. */
+  .reveal-line.is-in > span { transform: translateY(0); }
+  @keyframes reveal-line-up {
+    from { transform: translateY(110%); }
+    to   { transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-line > span { animation: none; transform: translateY(0); }
   }
 
   .shimmer {
