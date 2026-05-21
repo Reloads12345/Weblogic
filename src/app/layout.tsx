@@ -101,12 +101,10 @@ export const metadata: Metadata = {
       { url: "/icons/favicon.svg?v=2", type: "image/svg+xml", sizes: "any" },
     ],
     shortcut: "/icons/favicon.svg?v=2",
-    apple: [
-      // iOS Home Screen — same SVG. For pixel-perfect retina rendering
-      // drop a 180×180 PNG at /icons/apple-touch-icon.png and Next will
-      // auto-prefer it.
-      { url: "/icons/favicon.svg?v=2" },
-    ],
+    // No `apple` field here — the file-based convention at
+    // src/app/apple-icon.tsx auto-injects a 180×180 PNG link. iOS
+    // Safari is unreliable with SVG apple-touch-icons, so the edge-
+    // rendered PNG is the correct format for home-screen installs.
   },
 };
 

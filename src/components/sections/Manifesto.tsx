@@ -1,8 +1,12 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { Layers, Zap, Target } from "lucide-react";
 
+/**
+ * Why-WebLogic manifesto — Server Component.
+ *
+ * Was client-only because of Framer Motion entrance animations. Now uses
+ * `.fade-up-on-mount` on the heading and `.fade-up-stagger > *` on the
+ * pillar grid for staggered card entrances. CSS-only, zero hydration JS.
+ */
 const PILLARS = [
   {
     icon: Layers,
@@ -31,12 +35,7 @@ export default function Manifesto() {
       className="relative bg-ink-0 border-t border-white/5 py-28 md:py-36"
     >
       <div className="container-pad">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
+        <div className="fade-up-on-mount">
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
             / Why WebLogic
           </p>
@@ -44,19 +43,15 @@ export default function Manifesto() {
             Most agencies ship websites.{" "}
             <span className="text-mute">We build systems that evolve.</span>
           </h2>
-        </motion.div>
+        </div>
 
-        {/* Three pillars */}
-        <div className="mt-16 grid grid-cols-1 gap-px overflow-hidden rounded-3xl border border-white/8 bg-white/8 md:grid-cols-3">
-          {PILLARS.map((p, i) => {
+        {/* Three pillars — staggered fade-up via CSS, no JS */}
+        <div className="fade-up-stagger mt-16 grid grid-cols-1 gap-px overflow-hidden rounded-3xl border border-white/8 bg-white/8 md:grid-cols-3">
+          {PILLARS.map((p) => {
             const Icon = p.icon;
             return (
-              <motion.article
+              <article
                 key={p.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.7, delay: 0.1 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 className="group relative bg-ink-0 p-8 transition-colors duration-500 hover:bg-white/[0.015] md:p-10"
               >
                 <div className="flex items-center justify-between">
@@ -71,7 +66,7 @@ export default function Manifesto() {
                   {p.title}
                 </h3>
                 <p className="mt-3 text-pretty text-mute">{p.copy}</p>
-              </motion.article>
+              </article>
             );
           })}
         </div>

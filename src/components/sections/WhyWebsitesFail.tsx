@@ -1,12 +1,14 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { AlertTriangle, Clock, Gauge, Smartphone, ShoppingCart, Search } from "lucide-react";
 
 /**
- * Why Most Websites Fail — pain-agitate section.
- * Surfaces the real problems business owners feel, so they recognize themselves
- * in the symptoms and reach for the audit CTA right after.
+ * Why Most Websites Fail — pain-agitate section, Server Component.
+ *
+ * Surfaces the real problems business owners feel, so they recognize
+ * themselves in the symptoms and reach for the audit CTA right after.
+ *
+ * Was a client component purely for Framer Motion entrance staggers.
+ * Now uses `.fade-up-on-mount` + `.fade-up-stagger` (defined in
+ * globals.css) — CSS-only, zero hydration JS for this section.
  */
 const FAILURES = [
   {
@@ -54,38 +56,28 @@ export default function WhyWebsitesFail() {
       className="relative bg-ink-0 border-t border-white/5 py-24 md:py-32"
     >
       <div className="container-pad">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="grid items-end gap-8 md:grid-cols-12"
-        >
+        <div className="fade-up-on-mount grid items-end gap-8 md:grid-cols-12">
           <div className="md:col-span-7">
             <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
               / Why most websites fail
             </p>
             <h2 className="mt-6 max-w-[20ch] text-balance font-display text-display-lg leading-[0.95] tracking-tightest text-bone">
               Most websites sit online.{" "}
-              <span className="text-mute">They don't move business.</span>
+              <span className="text-mute">They don&apos;t move business.</span>
             </h2>
           </div>
           <p className="md:col-span-5 text-pretty text-mute md:text-lg">
-            If your site does any of these six things, it's costing you customers
-            you'll never see. The free audit catches them all.
+            If your site does any of these six things, it&apos;s costing you customers
+            you&apos;ll never see. The free audit catches them all.
           </p>
-        </motion.div>
+        </div>
 
-        <ul className="mt-14 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {FAILURES.map((f, i) => {
+        <ul className="fade-up-stagger mt-14 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {FAILURES.map((f) => {
             const Icon = f.icon;
             return (
-              <motion.li
+              <li
                 key={f.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.6, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                 className="group rounded-2xl border border-white/8 bg-ink-0 p-7 transition-colors duration-500 hover:border-white/20"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-lg border border-white/10 text-bone/80 transition-all duration-500 group-hover:border-electric/60 group-hover:text-electric">
@@ -95,7 +87,7 @@ export default function WhyWebsitesFail() {
                   {f.title}
                 </h3>
                 <p className="mt-2 text-pretty text-mute">{f.body}</p>
-              </motion.li>
+              </li>
             );
           })}
         </ul>
