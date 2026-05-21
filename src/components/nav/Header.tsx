@@ -46,6 +46,33 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Mobile drawer: lock body scroll while open + Escape closes. Without
+  // these the background scrolls under the drawer on iOS and keyboard
+  // users can't dismiss it.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
+
+  // Close mega menu on Escape — keyboard parity with the hover behavior.
+  useEffect(() => {
+    if (!activeMega) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveMega(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [activeMega]);
+
   const enterMega = (item: NavItem) => {
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
     if (item.mega) {
@@ -107,6 +134,14 @@ export default function Header() {
                   <button
                     type="button"
                     data-cursor="link"
+                    aria-haspopup="menu"
+                    aria-expanded={activeMega?.label === item.label}
+                    onFocus={() => enterMega(item)}
+                    onClick={() =>
+                      setActiveMega((prev) =>
+                        prev?.label === item.label ? null : item,
+                      )
+                    }
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm transition",
                       activeMega?.label === item.label
@@ -176,7 +211,12 @@ export default function Header() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[140] flex flex-col bg-ink-0/95 backdrop-blur-xl lg:hidden">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
+          className="fixed inset-0 z-[140] flex flex-col bg-ink-0/95 backdrop-blur-xl lg:hidden"
+        >
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
             <Logo size="md" />
             <button
@@ -184,6 +224,7 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
               className="rounded-full border border-white/10 p-2"
               aria-label="Close menu"
+              autoFocus
             >
               <X className="h-4 w-4" />
             </button>

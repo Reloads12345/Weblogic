@@ -70,7 +70,7 @@ export default function AboutClient() {
   return (
     <>
       <Header />
-      <main className="bg-ink-0">
+      <main id="main" className="bg-ink-0">
         {/* Hero */}
         <section className="bg-ink-0 pt-32 md:pt-40 pb-20 md:pb-24">
           <div className="container-pad max-w-4xl">

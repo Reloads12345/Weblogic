@@ -59,10 +59,15 @@ export default function Hero() {
     >
       <div className="container-pad relative z-10 grid grid-cols-12 items-center gap-8">
         <div className="col-span-12 md:col-span-7 lg:col-span-7">
-          {/* Eyebrow */}
+          {/* Eyebrow.
+              Was using a stylesheet-undefined `rise` animation (the
+              keyframe was never added) — meaning the staggered entrance
+              choreography was silently dead in production. Migrated to
+              `.fade-up-on-mount` + a CSS custom-prop delay so every
+              hero element rises with the intended cadence. */}
           <p
-            className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute"
-            style={{ animation: "rise 0.7s 0s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount font-mono text-[10px] uppercase tracking-[0.22em] text-mute"
+            style={{ ["--fade-up-delay" as string]: "0ms" }}
           >
             Web engineering · client portals · automations
           </p>
@@ -71,8 +76,8 @@ export default function Hero() {
           <a
             href="#mid-cta"
             data-cursor="link"
-            className="mt-6 inline-flex items-center gap-2 text-xs italic text-bone/85 transition-colors hover:text-bone"
-            style={{ animation: "rise 0.7s 0.2s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount mt-6 inline-flex items-center gap-2 text-xs italic text-bone/85 transition-colors hover:text-bone"
+            style={{ ["--fade-up-delay" as string]: "200ms" }}
           >
             <span className="relative inline-flex h-2 w-2" aria-hidden>
               <span className="absolute inset-0 rounded-full bg-electric/55 animate-ping" />
@@ -95,8 +100,8 @@ export default function Hero() {
 
           {/* Subheadline — direct, says what we build */}
           <p
-            className="mt-8 max-w-2xl text-pretty text-lg leading-snug text-mute md:text-xl"
-            style={{ animation: "rise 0.9s 0.55s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount mt-8 max-w-2xl text-pretty text-lg leading-snug text-mute md:text-xl"
+            style={{ ["--fade-up-delay" as string]: "550ms" }}
           >
             WebLogic builds high-performance websites, client portals, payment
             systems, and automations for businesses that need more than a basic
@@ -105,8 +110,8 @@ export default function Hero() {
 
           {/* Service chips — what we actually build */}
           <ul
-            className="mt-7 flex flex-wrap gap-2"
-            style={{ animation: "rise 0.9s 0.65s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount mt-7 flex flex-wrap gap-2"
+            style={{ ["--fade-up-delay" as string]: "650ms" }}
           >
             {SERVICE_CHIPS.map((c) => (
               <li key={c}>
@@ -123,8 +128,8 @@ export default function Hero() {
 
           {/* Dual CTAs */}
           <div
-            className="mt-10 flex flex-wrap items-center gap-3"
-            style={{ animation: "rise 0.9s 0.8s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount mt-10 flex flex-wrap items-center gap-3"
+            style={{ ["--fade-up-delay" as string]: "800ms" }}
           >
             <MagneticButton
               variant="electric"
@@ -147,8 +152,8 @@ export default function Hero() {
 
           {/* Audit microcopy */}
           <p
-            className="mt-5 flex items-center gap-2 text-xs text-mute"
-            style={{ animation: "rise 0.9s 0.9s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+            className="fade-up-on-mount mt-5 flex items-center gap-2 text-xs text-mute"
+            style={{ ["--fade-up-delay" as string]: "900ms" }}
           >
             <span className="h-1 w-1 rounded-full bg-electric" />
             Free 24-hour audit · written plan + fixed quote · no obligation
@@ -175,8 +180,8 @@ export default function Hero() {
 
       {/* Thin metric strip */}
       <div
-        className="container-pad relative z-10 mt-20 grid grid-cols-2 gap-x-10 gap-y-6 border-t border-white/6 pt-8 md:grid-cols-4"
-        style={{ animation: "rise 0.9s 1.05s cubic-bezier(0.2,0.8,0.2,1) backwards" }}
+        className="fade-up-on-mount container-pad relative z-10 mt-20 grid grid-cols-2 gap-x-10 gap-y-6 border-t border-white/6 pt-8 md:grid-cols-4"
+        style={{ ["--fade-up-delay" as string]: "1050ms" }}
       >
         <Stat label="Lighthouse target" value={98} />
         <Stat label="Median LCP" value={700} suffix="ms" />

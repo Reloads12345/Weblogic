@@ -32,7 +32,7 @@ export default function PublicError({
   }, [error]);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-ink-0 px-6 text-bone">
+    <main id="main" className="grid min-h-screen place-items-center bg-ink-0 px-6 text-bone">
       <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-ink-50 p-8 text-center md:p-10">
         <span className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-electric/40 bg-electric/10 text-electric">
           <AlertTriangle className="h-7 w-7" />

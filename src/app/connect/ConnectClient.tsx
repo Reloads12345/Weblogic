@@ -160,7 +160,7 @@ export default function ConnectClient() {
   return (
     <>
       <Header />
-      <main className="bg-ink-0 text-bone overflow-x-hidden">
+      <main id="main" className="bg-ink-0 text-bone overflow-x-hidden">
         <Hero />
         <IntroVideo />
         <TransformationShowcase />

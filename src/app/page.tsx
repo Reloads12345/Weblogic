@@ -78,7 +78,7 @@ export default async function Home() {
   return (
     <>
       <Header />
-      <main className="relative">
+      <main id="main" className="relative">
         {/* Above-fold: eager so first paint is instant */}
         <Hero />
         <ClientLogos />

@@ -5,20 +5,31 @@ import { z } from "zod";
 /**
  * Server-side admin auth.
  *
- * Credentials are read from environment variables at request time so they
- * never ship in the client bundle:
+ * Credentials read from env vars at request time — never ship in the
+ * client bundle:
  *
- *   ADMIN_USERNAME   (default: "weblogic")
- *   ADMIN_PASSWORD   (default: "admin2026")
+ *   ADMIN_USERNAME   (required in production)
+ *   ADMIN_PASSWORD   (required in production)
  *
- * The fallback defaults exist so local dev / first-clone works out of the
- * box — but ANY production deploy should set both envs to something
- * unguessable before the URL is shared.
+ * In LOCAL DEV ONLY, sensible defaults exist so `npm run dev` works
+ * out of the box. In production (VERCEL=1) both env vars MUST be set —
+ * the action returns 503 if either is missing, so we never accept the
+ * default credentials on a public deployment.
  *
- * This is intentionally lightweight (no JWT, no sessions table). It's a
- * single-tenant gate for an asset/work CRUD admin. To upgrade to real
- * multi-user auth, replace this action with NextAuth / Clerk / Supabase
- * and keep the same call signature.
+ * Token contract:
+ *   On success we return the configured password itself as the bearer
+ *   token. The client persists it in localStorage and sends it on every
+ *   privileged API call via the `x-admin-token` header. The route handler
+ *   uses `checkAdmin(req)` (lib/admin-session.ts) to validate.
+ *
+ *   Trade-offs:
+ *     • Stored in plaintext localStorage (XSS-readable). Acceptable for a
+ *       single-tenant operator CRUD; not acceptable for multi-tenant.
+ *     • Rotating ADMIN_PASSWORD invalidates every active session
+ *       automatically — which is desirable.
+ *
+ *   To upgrade to JWT / NextAuth / a sessions table, replace this function
+ *   and `checkAdmin` — every call site already routes through them.
  */
 
 const InputSchema = z.object({
@@ -32,6 +43,8 @@ export interface LoginResult {
   token: string;
   error?: string;
 }
+
+const IS_VERCEL = process.env.VERCEL === "1";
 
 /**
  * Cheap constant-time-ish string compare. Not crypto-secure (JS strings
@@ -52,8 +65,20 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
     return { ok: false, token: "", error: "Invalid input." };
   }
 
-  const expectedUser = process.env.ADMIN_USERNAME ?? "weblogic";
-  const expectedPass = process.env.ADMIN_PASSWORD ?? "admin2026";
+  // Fail closed in production if env vars aren't set — never accept the
+  // default credentials on a public deployment.
+  const envUser = process.env.ADMIN_USERNAME;
+  const envPass = process.env.ADMIN_PASSWORD;
+  if (IS_VERCEL && (!envUser || !envPass)) {
+    return {
+      ok: false,
+      token: "",
+      error:
+        "Admin not configured on this deployment. Set ADMIN_USERNAME and ADMIN_PASSWORD.",
+    };
+  }
+  const expectedUser = envUser ?? "weblogic";
+  const expectedPass = envPass ?? "admin2026";
 
   const userOk = safeEquals(parsed.data.username.trim(), expectedUser);
   const passOk = safeEquals(parsed.data.password, expectedPass);
@@ -64,12 +89,8 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
     return { ok: false, token: "", error: "Wrong credentials." };
   }
 
-  // Opaque token tied to the env credential. Client persists this in
-  // localStorage. We can rotate it by changing ADMIN_PASSWORD in prod.
-  const token =
-    typeof globalThis.crypto?.randomUUID === "function"
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  return { ok: true, token };
+  // Return the password itself as the bearer token. The server validates
+  // x-admin-token === ADMIN_PASSWORD on every privileged request — so
+  // rotating the password automatically invalidates every active session.
+  return { ok: true, token: expectedPass };
 }

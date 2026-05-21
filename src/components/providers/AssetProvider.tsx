@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { adminFetch } from "@/components/admin/AdminAuth";
 
 /* ───────────────────────────────────────────────────────────────
  * AssetProvider — client-side cache of the admin upload manifest.
@@ -22,6 +23,24 @@ import {
  * display them — silent failures were the root cause of
  * "0/45 stays 0/45 after upload" on production.
  * ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Returns true when we should emit operational `[media-admin]` console
+ * chatter — i.e. we're either in /admin or running on localhost. Public
+ * visitors who open devtools shouldn't see internal CMS noise.
+ */
+function isAdminContext(): boolean {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname || "";
+  if (path.startsWith("/admin")) return true;
+  if (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
+    return true;
+  }
+  return false;
+}
 
 interface AssetEntry {
   url: string;
@@ -132,15 +151,21 @@ export default function AssetProvider({
       setAssets(normalizeAssets(safeAssets));
       setUploadMode(safeMode);
       setLastError(null);
-      console.log(
-        "[media-admin] manifest_loaded",
-        JSON.stringify({
-          mode: safeMode,
-          count: Object.keys(safeAssets).length,
-        }),
-      );
+      // Don't spam the public console on every visit — only log inside
+      // /admin (where this signal is actually useful) or in dev.
+      if (isAdminContext()) {
+        console.log(
+          "[media-admin] manifest_loaded",
+          JSON.stringify({
+            mode: safeMode,
+            count: Object.keys(safeAssets).length,
+          }),
+        );
+      }
     } catch (err) {
       setLastError(err instanceof Error ? err.message : "Manifest fetch failed");
+      // Errors are always worth surfacing — even on the public site, this
+      // is the only signal something is broken with the media pipeline.
       console.error("[media-admin] manifest_fetch_threw", err);
     } finally {
       setManifestLoading(false);
@@ -163,7 +188,9 @@ export default function AssetProvider({
         formData.append("slot", slot);
         formData.append("slotId", slot);
 
-        const res = await fetch("/api/upload", {
+        // adminFetch attaches the x-admin-token header so the server-side
+        // gate accepts the call. Anonymous browsers receive 401 instantly.
+        const res = await adminFetch("/api/upload", {
           method: "POST",
           body: formData,
         });
@@ -221,10 +248,12 @@ export default function AssetProvider({
         } else {
           setAssets((prev) => ({ ...prev, [slot]: freshEntry }));
         }
-        console.log(
-          "[media-admin] upload_success",
-          JSON.stringify({ slot, type: json.type, url: responseUrl }),
-        );
+        if (isAdminContext()) {
+          console.log(
+            "[media-admin] upload_success",
+            JSON.stringify({ slot, type: json.type, url: responseUrl }),
+          );
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";
         setLastError(msg);
@@ -239,7 +268,7 @@ export default function AssetProvider({
   const clearAsset = useCallback(async (slot: string) => {
     setLastError(null);
     try {
-      const res = await fetch(
+      const res = await adminFetch(
         `/api/upload?slot=${encodeURIComponent(slot)}`,
         { method: "DELETE" },
       );

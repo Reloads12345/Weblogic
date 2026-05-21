@@ -208,7 +208,7 @@ export default function CheckoutClient() {
   return (
     <>
       <Header />
-      <main className="bg-ink-0">
+      <main id="main" className="bg-ink-0">
         {/* Hero */}
         <section className="border-b border-white/5 pt-32 md:pt-40 pb-10">
           <div className="container-pad max-w-6xl">

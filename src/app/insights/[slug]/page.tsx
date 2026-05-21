@@ -59,7 +59,7 @@ export default async function InsightPage({
   return (
     <>
       <Header />
-      <main className="bg-ink-0 text-bone">
+      <main id="main" className="bg-ink-0 text-bone">
         {/* Article header */}
         <article className="pt-32 md:pt-40">
           <div className="container-pad mx-auto max-w-3xl">

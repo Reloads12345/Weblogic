@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorReporterBackend } from "@/lib/error-reporter";
+import { checkAdmin } from "@/lib/admin-session";
 
 /**
  * GET /api/diagnostics
@@ -58,7 +59,16 @@ const STRIPE_PRICE_KEYS = [
   "STRIPE_PRICE_CUSTOM_RETAINER",
 ] as const;
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Gate this endpoint — it inventories env-var names, deployment SHA,
+  // and infra topology. Useful for the operator, dangerous if any of
+  // that info shapes a future attack. `checkAdmin` returns null when
+  // the `x-admin-token` header matches ADMIN_PASSWORD; otherwise 401.
+  const unauthorized = checkAdmin(req);
+  if (unauthorized) {
+    return NextResponse.json(unauthorized.body, { status: unauthorized.status });
+  }
+
   const stripePrices: Record<string, boolean> = {};
   for (const k of STRIPE_PRICE_KEYS) {
     stripePrices[k] = Boolean(process.env[k]);

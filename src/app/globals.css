@@ -454,6 +454,40 @@ html[data-announcement-dismissed="true"] {
     }
   }
 
+  /* Visually-hidden skip link that appears on keyboard focus. Keyboard users
+     can press Tab on page load to bypass the nav directly into <main>. */
+  .skip-link {
+    position: fixed;
+    left: 1rem;
+    top: 1rem;
+    z-index: 9999;
+    transform: translateY(-200%);
+    transition: transform 180ms cubic-bezier(0.2, 0.85, 0.2, 1);
+    background: var(--electric);
+    color: #ffffff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 0.75rem 1.25rem;
+    border-radius: 9999px;
+    box-shadow: 0 8px 30px rgba(0, 82, 255, 0.4);
+  }
+  .skip-link:focus-visible {
+    transform: translateY(0);
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+  }
+
+  /* Default focus ring across the site. Tailwind's `outline-none` is used
+     in a few places to suppress the browser default — this restores a
+     branded focus indicator everywhere keyboard users actually need it. */
+  :focus-visible {
+    outline: 2px solid var(--electric);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
   .shimmer {
     background-size: 200% 100%;
     animation: shimmer 2.6s linear infinite;

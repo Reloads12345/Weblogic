@@ -62,7 +62,7 @@ export default function WorkClient({ slug, item: cs, items }: Props) {
         </div>
       </header>
 
-      <main className="bg-ink-0 pt-[80px] md:pt-[88px]">
+      <main id="main" className="bg-ink-0 pt-[80px] md:pt-[88px]">
         {/* Hero */}
         <section className="border-b border-white/5 py-20 md:py-28">
           <div className="container-pad">

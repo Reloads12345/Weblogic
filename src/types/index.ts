@@ -1,4 +1,8 @@
-export type Persona = "default" | "marketing-leader" | "founder" | "engineering" | "fintech" | "saas";
+// `Persona` was used by an unshipped personalization experiment that
+// switched hero copy based on a `?persona=...` query param. The provider
+// and switcher were never wired into a public surface, so both — along
+// with this type — were removed during the production audit. Re-add when
+// there's a real personalization story to ship.
 
 export interface NavMegaColumn {
   heading: string;

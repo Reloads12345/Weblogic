@@ -212,7 +212,7 @@ export default function PricingClient() {
   return (
     <>
       <Header />
-      <main className="bg-ink-0">
+      <main id="main" className="bg-ink-0">
         {/* Hero */}
         <section className="border-b border-white/5 pt-32 md:pt-40 pb-20 md:pb-24">
           <div className="container-pad max-w-4xl">

@@ -12,3 +12,7 @@ dist/
 .vscode/
 public/uploads/*
 !public/uploads/.gitkeep
+
+# TypeScript incremental build cache — regenerated on every build, not
+# something to commit.
+tsconfig.tsbuildinfo

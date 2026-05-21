@@ -320,7 +320,7 @@ export default function ThankYouClient() {
         </div>
       </header>
 
-      <main className="bg-ink-0 pt-[80px] md:pt-[88px]">
+      <main id="main" className="bg-ink-0 pt-[80px] md:pt-[88px]">
         {/* Hero — confirmation */}
         <section className="border-b border-white/5 py-24 md:py-32">
           <div className="container-pad max-w-3xl text-center">

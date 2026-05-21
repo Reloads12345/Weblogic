@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, ArrowRight, CheckCircle2, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLeadModal } from "@/components/ui/LeadModalProvider";
 import { submitLead } from "@/app/actions/lead";
@@ -94,6 +94,43 @@ export default function LeadModal() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Escape closes; body-scroll lock while open; restore focus to opener on
+  // close. The native <dialog> would handle most of this automatically but
+  // it doesn't compose with Framer Motion's enter/exit transitions.
+  useEffect(() => {
+    if (!isOpen) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+
+    // Focus the first focusable element in the dialog so keyboard users
+    // land inside immediately instead of having to Tab back from <body>.
+    const focusTimer = window.setTimeout(() => {
+      const first = dialogRef.current?.querySelector<HTMLElement>(
+        "[autofocus], input:not([type=hidden]), button:not([aria-label='Close'])",
+      );
+      first?.focus();
+    }, 60);
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      window.clearTimeout(focusTimer);
+      // Restore focus to whatever triggered the modal so screen-reader
+      // and keyboard users don't get dumped at the top of <body>.
+      opener?.focus?.();
+    };
+  }, [isOpen, close]);
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((s) => ({ ...s, [k]: v }));
@@ -151,11 +188,13 @@ export default function LeadModal() {
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          ref={dialogRef}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[170] flex items-center justify-center p-4"
-          aria-modal
+          aria-modal="true"
+          aria-labelledby="lead-modal-title"
           role="dialog"
         >
           <button
@@ -174,7 +213,10 @@ export default function LeadModal() {
             <aside className="hidden flex-col justify-between border-r border-white/5 bg-ink-100/60 p-7 md:flex">
               <div>
                 <p className="eyebrow text-electric">Free 24-hour audit</p>
-                <h3 className="mt-3 font-display text-3xl leading-[0.95] tracking-tightest text-bone">
+                <h3
+                  id="lead-modal-title"
+                  className="mt-3 font-display text-3xl leading-[0.95] tracking-tightest text-bone"
+                >
                   Send your site. Get a written plan.
                 </h3>
                 <p className="mt-3 text-sm text-mute">

@@ -6,7 +6,6 @@ import "./globals.css";
 import { BRAND } from "@/lib/data";
 
 import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";
-import PersonalizationProvider from "@/components/providers/PersonalizationProvider";
 import AssetProvider from "@/components/providers/AssetProvider";
 import SoundProvider from "@/components/providers/SoundProvider";
 import LeadModalProvider from "@/components/ui/LeadModalProvider";
@@ -143,28 +142,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-ink-0 text-bone antialiased" suppressHydrationWarning>
+        {/* Keyboard-only skip link — first focusable element on every page.
+            Pressing Tab once on load reveals it; Enter jumps past the
+            header/nav into the page's main content. */}
+        <a href="#main" className="skip-link">
+          Skip to main content
+        </a>
         <BuildMarker commit={commit} buildTime={buildTime} />
-        <PersonalizationProvider>
-          <AssetProvider>
-            <SoundProvider>
-              <LeadModalProvider>
-                <SmoothScrollProvider>
-                  <AnnouncementBar />
-                  {children}
-                  {/* Global UI — public site only, no admin chrome */}
-                  <MagneticCursor />
-                  <StickyCta />
-                  <ExitIntent />
-                </SmoothScrollProvider>
-                {/* Vercel observability — Speed Insights captures Core Web Vitals
-                    (LCP / INP / CLS) and Analytics captures pageviews. Both
-                    no-op outside Vercel hosting, so they're safe in dev. */}
-                <SpeedInsights />
-                <Analytics />
-              </LeadModalProvider>
-            </SoundProvider>
-          </AssetProvider>
-        </PersonalizationProvider>
+        <AssetProvider>
+          <SoundProvider>
+            <LeadModalProvider>
+              <SmoothScrollProvider>
+                <AnnouncementBar />
+                {/* All page content. Routes wrap their content in <main id="main">
+                    (or inherit via the not-found / error boundaries) so the
+                    skip link lands inside the document body. */}
+                {children}
+                {/* Global UI — public site only, no admin chrome */}
+                <MagneticCursor />
+                <StickyCta />
+                <ExitIntent />
+              </SmoothScrollProvider>
+              {/* Vercel observability — Speed Insights captures Core Web Vitals
+                  (LCP / INP / CLS) and Analytics captures pageviews. Both
+                  no-op outside Vercel hosting, so they're safe in dev. */}
+              <SpeedInsights />
+              <Analytics />
+            </LeadModalProvider>
+          </SoundProvider>
+        </AssetProvider>
 
         <script
           type="application/ld+json"

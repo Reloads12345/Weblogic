@@ -33,6 +33,22 @@ const nextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Force HTTPS for one year on every subdomain. Safe to add now
+          // — the production hostname `weblogic.digital` is already
+          // HTTPS-only. If we ever serve over HTTP (e.g. an internal
+          // tool), strip this for that hostname.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains; preload",
+          },
+          // Deny everything we don't actively use — camera, mic,
+          // geolocation, etc. — to minimize the surface a malicious
+          // dependency could exploit at runtime.
+          {
+            key: "Permissions-Policy",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()",
+          },
         ],
       },
       {

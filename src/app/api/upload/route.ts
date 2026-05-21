@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import { del, list, put } from "@vercel/blob";
+import { checkAdmin } from "@/lib/admin-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -191,7 +192,16 @@ function productionUnconfigured() {
   );
 }
 
-/* ─────────────────────── GET ─────────────────────── */
+/* ─────────────────────── GET (read manifest) ───────────────────────
+ *
+ * GET is public-readable. The values exposed are public URLs that the
+ * marketing pages already render — there's nothing private here.
+ * Authenticating GET would also break the public AssetProvider, which
+ * fetches this endpoint on every visit to wire admin-uploaded media into
+ * the homepage.
+ *
+ * POST / DELETE are admin-only (see below).
+ * ────────────────────────────────────────────────────────────────── */
 
 export async function GET() {
   if (IS_VERCEL && !HAS_BLOB_TOKEN) {
@@ -204,9 +214,16 @@ export async function GET() {
   });
 }
 
-/* ─────────────────────── POST (upload) ─────────────────────── */
+/* ─────────────────────── POST (upload, admin-only) ─────────────────── */
 
 export async function POST(req: NextRequest) {
+  // Authenticate FIRST so we never even parse a form body for anonymous
+  // callers (saves bandwidth + Lambda time on hostile traffic).
+  const unauthorized = checkAdmin(req);
+  if (unauthorized) {
+    return NextResponse.json(unauthorized.body, { status: unauthorized.status });
+  }
+
   console.log("[media] upload_received");
   if (IS_VERCEL && !HAS_BLOB_TOKEN) return productionUnconfigured();
 
@@ -342,9 +359,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-/* ─────────────────────── DELETE ─────────────────────── */
+/* ─────────────────────── DELETE (admin-only) ─────────────────────── */
 
 export async function DELETE(req: NextRequest) {
+  const unauthorized = checkAdmin(req);
+  if (unauthorized) {
+    return NextResponse.json(unauthorized.body, { status: unauthorized.status });
+  }
   if (IS_VERCEL && !HAS_BLOB_TOKEN) return productionUnconfigured();
 
   const url = new URL(req.url);

@@ -1,13 +1,18 @@
 /**
  * Client-side admin gate.
  *
- * The actual credential check now lives in `src/app/actions/admin-auth.ts`,
- * which reads `ADMIN_USERNAME` and `ADMIN_PASSWORD` from environment vars
- * at request time. Those secrets never ship in the client bundle.
+ * The actual credential check lives in `src/app/actions/admin-auth.ts`,
+ * which reads `ADMIN_USERNAME` / `ADMIN_PASSWORD` from env vars at request
+ * time. The secrets never ship in the client bundle.
  *
- * This file only manages the resulting opaque token in localStorage.
- * To swap to real auth (NextAuth, Clerk, Supabase, etc.) replace the
- * helpers below — the rest of the admin UI uses `isAuthed()` / `logout()`.
+ * On successful login the server hands back an opaque bearer token. We
+ * persist it in localStorage and use it to authenticate every subsequent
+ * privileged API call (`/api/upload` etc.) via the `x-admin-token`
+ * header. Helper: `adminFetch(input, init)`.
+ *
+ * To swap to real auth (NextAuth, Clerk, Supabase, etc.) replace these
+ * helpers — the rest of the admin UI uses `isAuthed()` / `logout()` /
+ * `adminFetch()`.
  */
 
 import { loginAction } from "@/app/actions/admin-auth";
@@ -21,6 +26,19 @@ export function isAuthed(): boolean {
     return Boolean(v && v.length > 0);
   } catch {
     return false;
+  }
+}
+
+/**
+ * Read the bearer token. Used by `adminFetch` to attach `x-admin-token`.
+ * Returns null when not signed in.
+ */
+export function adminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(KEY);
+  } catch {
+    return null;
   }
 }
 
@@ -50,4 +68,19 @@ export function logout() {
   try {
     localStorage.removeItem(KEY);
   } catch {}
+}
+
+/**
+ * fetch() wrapper that attaches the admin bearer token. Use this for ANY
+ * call to a privileged API route. Falls back to a 401-shaped response if
+ * the operator isn't signed in, so the caller doesn't have to special-case.
+ */
+export async function adminFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const token = adminToken();
+  const headers = new Headers(init.headers ?? {});
+  if (token) headers.set("x-admin-token", token);
+  return fetch(input, { ...init, headers });
 }
