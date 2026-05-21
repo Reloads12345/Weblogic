@@ -60,31 +60,20 @@ interface Ctx {
 const AssetCtx = createContext<Ctx | null>(null);
 
 /**
- * Append `?_v=<timestamp>` to every asset URL so the browser refetches
- * after a replace upload.
+ * Pass-through normalisation.
  *
- * Vercel Blob with `addRandomSuffix: false` returns the SAME public URL
- * when you overwrite a file at the same path. Without a cache-buster the
- * browser's HTTP image cache happily serves the old bytes — the user sees
- * the previous image and concludes the upload "didn't work."
- *
- * We rebuild the URL with the manifest's `uploadedAt` so the cache key
- * changes every time a slot is replaced.
+ * We no longer need a `?_v=` cache-buster on URLs because the server now
+ * writes each upload to a UNIQUE pathname (`slot__<timestamp>.ext`). Each
+ * replace yields a fresh URL, so the browser cache key changes naturally
+ * and we never serve stale bytes. Query strings on Vercel Blob URLs were
+ * also breaking video range-requests, so dropping them fixes the
+ * "Preview failed to load" error.
  */
-function withCacheBust(asset: AssetEntry): AssetEntry {
-  if (!asset?.url) return asset;
-  const sep = asset.url.includes("?") ? "&" : "?";
-  return {
-    ...asset,
-    url: `${asset.url}${sep}_v=${asset.uploadedAt ?? Date.now()}`,
-  };
-}
-
 function normalizeAssets(raw: AssetMap): AssetMap {
   const out: AssetMap = {};
   for (const slot of Object.keys(raw)) {
     const entry = raw[slot];
-    if (entry?.url) out[slot] = withCacheBust(entry);
+    if (entry?.url) out[slot] = entry;
   }
   return out;
 }
@@ -206,23 +195,15 @@ export default function AssetProvider({
           return;
         }
 
-        // The server returns the FULL authoritative manifest. We use it
-        // for OTHER slots' state, but for the SLOT WE JUST UPLOADED TO
-        // we always inject a fresh client-side timestamp.
-        //
-        // Why: Vercel Blob's `list()` (which the server uses to derive
-        // the manifest) can return a stale `uploadedAt` for a few hundred
-        // ms right after an overwrite — meaning the cache-bust suffix
-        // would match a value the browser has already cached, and the
-        // browser would serve the OLD image even though the new bytes
-        // are sitting at the same URL. A fresh client timestamp
-        // guarantees the URL is unique → cache miss → new bytes load.
-        const now = Date.now();
+        // The server now writes each upload to a UNIQUE pathname
+        // (`slot__<ts>.<ext>`), so the returned URL is already unique
+        // per upload. No `?_v=` query-string cache-busting needed —
+        // those were breaking video playback on Vercel Blob's CDN.
         const responseUrl = json.url ?? "";
         const freshEntry: AssetEntry = {
-          url: `${responseUrl}${responseUrl.includes("?") ? "&" : "?"}_v=${now}`,
+          url: responseUrl,
           type: json.type ?? "image",
-          uploadedAt: now,
+          uploadedAt: json.uploadedAt ?? Date.now(),
         };
 
         if (
@@ -230,19 +211,19 @@ export default function AssetProvider({
           typeof json.manifest === "object" &&
           !Array.isArray(json.manifest)
         ) {
-          // Normalize every other entry as usual, but force the just-
-          // uploaded slot to use our fresh timestamp.
           const normalized = normalizeAssets(json.manifest as AssetMap);
+          // Belt-and-suspenders: in case the server's `list()` lagged
+          // the `put()` by a few ms, force-overwrite our slot with the
+          // response URL we know is correct.
           normalized[slot] = freshEntry;
           setAssets(normalized);
           if (json.mode) setUploadMode(json.mode);
         } else {
-          // No manifest in response — at least make sure this slot updates.
           setAssets((prev) => ({ ...prev, [slot]: freshEntry }));
         }
         console.log(
           "[media-admin] upload_success",
-          JSON.stringify({ slot, type: json.type, v: now }),
+          JSON.stringify({ slot, type: json.type, url: responseUrl }),
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Upload failed";

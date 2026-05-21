@@ -73,26 +73,49 @@ async function buildManifest(): Promise<Manifest> {
   return buildManifestFromFs();
 }
 
+/**
+ * Extract the slot key from a stored filename.
+ *
+ * We use a `slot__<timestamp>.<ext>` naming convention so each upload
+ * creates a UNIQUE URL — that way Vercel Blob's CDN serves a different
+ * cache entry per upload, and we never need a `?_v=` query string
+ * (which broke video playback because the CDN handles videos via byte-
+ * range requests that don't play nicely with arbitrary query strings).
+ *
+ * Falls back to the legacy `slot.<ext>` shape for files committed before
+ * the migration.
+ */
+function slotFromFilename(filename: string): string | null {
+  const dotIdx = filename.lastIndexOf(".");
+  if (dotIdx <= 0) return null;
+  const base = filename.slice(0, dotIdx);
+  const dunderIdx = base.indexOf("__");
+  return dunderIdx > 0 ? base.slice(0, dunderIdx) : base;
+}
+
 async function buildManifestFromBlob(): Promise<Manifest> {
   const m: Manifest = {};
   try {
     const { blobs } = await list({ prefix: BLOB_PREFIX, limit: 1000 });
-    for (const b of blobs) {
-      // Strip the "media/" prefix
+    // Sort newest first so when two files exist for the same slot (e.g.
+    // mid-replacement), the newer one wins.
+    const sorted = [...blobs].sort((a, b) => {
+      const aTs = a.uploadedAt instanceof Date ? a.uploadedAt.getTime() : 0;
+      const bTs = b.uploadedAt instanceof Date ? b.uploadedAt.getTime() : 0;
+      return bTs - aTs;
+    });
+    for (const b of sorted) {
       const filename = b.pathname.startsWith(BLOB_PREFIX)
         ? b.pathname.slice(BLOB_PREFIX.length)
         : b.pathname;
-      // Skip any legacy manifest leftovers from the old architecture
       if (filename === "manifest.json") continue;
-      const dotIdx = filename.lastIndexOf(".");
-      if (dotIdx <= 0) continue;
-      const slot = filename.slice(0, dotIdx);
-      const ext = filename.slice(dotIdx + 1);
+      const slot = slotFromFilename(filename);
       if (!slot) continue;
+      // First entry per slot (which is the newest because we sorted) wins.
+      if (m[slot]) continue;
+      const ext = filename.slice(filename.lastIndexOf(".") + 1);
       const uploadedAt =
-        b.uploadedAt instanceof Date
-          ? b.uploadedAt.getTime()
-          : Date.now();
+        b.uploadedAt instanceof Date ? b.uploadedAt.getTime() : Date.now();
       m[slot] = {
         url: b.url,
         type: inferTypeFromExt(ext),
@@ -109,19 +132,25 @@ async function buildManifestFromFs(): Promise<Manifest> {
   const m: Manifest = {};
   try {
     const files = await fs.readdir(UPLOAD_DIR);
-    for (const f of files) {
+    // Sort by mtime so newest version of a slot wins.
+    const annotated = await Promise.all(
+      files.map(async (f) => {
+        const full = path.join(UPLOAD_DIR, f);
+        const stat = await fs.stat(full).catch(() => null);
+        return { f, mtime: stat?.mtimeMs ?? 0 };
+      }),
+    );
+    annotated.sort((a, b) => b.mtime - a.mtime);
+    for (const { f, mtime } of annotated) {
       if (f === "manifest.json" || f === ".gitkeep") continue;
-      const dotIdx = f.lastIndexOf(".");
-      if (dotIdx <= 0) continue;
-      const slot = f.slice(0, dotIdx);
-      const ext = f.slice(dotIdx + 1);
+      const slot = slotFromFilename(f);
       if (!slot) continue;
-      const full = path.join(UPLOAD_DIR, f);
-      const stat = await fs.stat(full).catch(() => null);
+      if (m[slot]) continue;
+      const ext = f.slice(f.lastIndexOf(".") + 1);
       m[slot] = {
         url: `/uploads/${f}`,
         type: inferTypeFromExt(ext),
-        uploadedAt: stat?.mtimeMs ?? Date.now(),
+        uploadedAt: mtime || Date.now(),
       };
     }
   } catch {
@@ -214,25 +243,33 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = extFromMime(file.type);
-    const filename = `${slot}.${ext}`;
+    // Unique filename per upload — `slot__<ts>.<ext>` — so each replace
+    // gets a brand-new URL. No `?_v=` query strings needed (those were
+    // breaking video playback on Vercel Blob's CDN).
+    const uploadTs = Date.now();
+    const filename = `${slot}__${uploadTs}.${ext}`;
     let entry: ManifestEntry;
 
     if (IS_VERCEL && HAS_BLOB_TOKEN) {
       /* ─── Vercel Blob upload ─── */
       const blobPath = `${BLOB_PREFIX}${filename}`;
 
-      // Delete previous file at this slot with a DIFFERENT extension only.
-      // We never touch files belonging to OTHER slots — the prefix
-      // `media/${slot}.` (with trailing dot) only matches this exact slot.
+      // Delete EVERY previous file belonging to this slot:
+      //   - legacy `media/<slot>.<ext>`
+      //   - new    `media/<slot>__<oldTs>.<ext>`
       try {
-        const { blobs } = await list({ prefix: `${BLOB_PREFIX}${slot}.` });
-        for (const b of blobs) {
+        const [legacy, versioned] = await Promise.all([
+          list({ prefix: `${BLOB_PREFIX}${slot}.` }),
+          list({ prefix: `${BLOB_PREFIX}${slot}__` }),
+        ]);
+        const all = [...legacy.blobs, ...versioned.blobs];
+        for (const b of all) {
           if (b.pathname !== blobPath) {
             await del(b.url).catch(() => {});
           }
         }
       } catch {
-        // listing failures are non-fatal
+        // listing failures non-fatal — orphans just sit in storage
       }
 
       const blob = await put(blobPath, file, {
@@ -249,14 +286,17 @@ export async function POST(req: NextRequest) {
       entry = {
         url: blob.url,
         type: isVideo ? "video" : isImage ? "image" : "document",
-        uploadedAt: Date.now(),
+        uploadedAt: uploadTs,
       };
     } else {
       /* ─── Local filesystem (dev) ─── */
       await fs.mkdir(UPLOAD_DIR, { recursive: true });
       const existing = await fs.readdir(UPLOAD_DIR).catch(() => []);
       for (const f of existing) {
-        if (f.startsWith(`${slot}.`) && f !== filename) {
+        if (
+          (f.startsWith(`${slot}.`) || f.startsWith(`${slot}__`)) &&
+          f !== filename
+        ) {
           await fs.unlink(path.join(UPLOAD_DIR, f)).catch(() => {});
         }
       }
@@ -265,7 +305,7 @@ export async function POST(req: NextRequest) {
       entry = {
         url: `/uploads/${filename}`,
         type: isVideo ? "video" : isImage ? "image" : "document",
-        uploadedAt: Date.now(),
+        uploadedAt: uploadTs,
       };
     }
 
@@ -316,15 +356,19 @@ export async function DELETE(req: NextRequest) {
 
   try {
     if (IS_VERCEL && HAS_BLOB_TOKEN) {
-      // Delete every file (any extension) belonging to this slot.
-      const { blobs } = await list({ prefix: `${BLOB_PREFIX}${slot}.` });
-      for (const b of blobs) {
+      // Delete every file belonging to this slot — both naming conventions.
+      const [legacy, versioned] = await Promise.all([
+        list({ prefix: `${BLOB_PREFIX}${slot}.` }),
+        list({ prefix: `${BLOB_PREFIX}${slot}__` }),
+      ]);
+      const all = [...legacy.blobs, ...versioned.blobs];
+      for (const b of all) {
         await del(b.url).catch(() => {});
       }
     } else {
       const files = await fs.readdir(UPLOAD_DIR).catch(() => []);
       for (const f of files) {
-        if (f.startsWith(`${slot}.`)) {
+        if (f.startsWith(`${slot}.`) || f.startsWith(`${slot}__`)) {
           await fs.unlink(path.join(UPLOAD_DIR, f)).catch(() => {});
         }
       }
