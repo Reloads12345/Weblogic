@@ -81,6 +81,19 @@ export interface CaseStudy {
    * If `permissionStatus === "anonymized"`, use this label instead of `client`.
    */
   anonymizedClientName?: string;
+  /**
+   * Process timeline rendered on /work/[slug]. Each phase is a short
+   * milestone description; `dates` is freeform so "Week 1" / "Q3 2024" /
+   * "Ongoing" all work. Omit on internal demos that didn't follow a real
+   * client engagement flow.
+   */
+  timeline?: { phase: string; description: string; dates?: string }[];
+  /**
+   * Optional pull-quote rendered as a featured testimonial on
+   * /work/[slug]. Distinct from the homepage TESTIMONIALS array — those
+   * roam across the carousel; this one belongs to THIS specific project.
+   */
+  caseQuote?: { quote: string; author: string; role: string };
 }
 
 export interface Testimonial {

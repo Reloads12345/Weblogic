@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, ArrowRight, CheckCircle2, X } from "lucide-react";
+import { AlertCircle, ArrowRight, CalendarCheck, CheckCircle2, X } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLeadModal } from "@/components/ui/LeadModalProvider";
 import { submitLead } from "@/app/actions/lead";
+import CalEmbed from "@/components/ui/CalEmbed";
 import { cn } from "@/lib/utils";
 
 /* ----------------------------------------------------------------------------
@@ -23,7 +24,7 @@ const STAGES = [
   { id: "done", label: "Sent" },
 ] as const;
 
-type Stage = (typeof STAGES)[number]["id"];
+type Stage = (typeof STAGES)[number]["id"] | "book";
 
 type YesNo = "yes" | "no";
 type YesNoUnsure = "yes" | "no" | "unsure";
@@ -304,6 +305,42 @@ export default function LeadModal() {
                       </Chip>
                     ))}
                   </div>
+
+                  {/* Alternative path — skip the form entirely and jump
+                      straight into the calendar. Higher intent users
+                      who already know they want a call shouldn't have
+                      to type their way to it. */}
+                  <div className="mt-6 flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.22em] text-mute">
+                    <span className="h-px flex-1 bg-white/8" />
+                    <span>Or</span>
+                    <span className="h-px flex-1 bg-white/8" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStage("book")}
+                    className="group mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-electric/40 bg-electric/10 px-5 py-3 text-sm font-medium text-electric transition hover:border-electric hover:bg-electric/20"
+                  >
+                    <CalendarCheck className="h-4 w-4" />
+                    Book a 20-min call instead
+                    <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                  </button>
+                </Step>
+              )}
+
+              {/* ───────────── Alternative path: book directly ─────────── */}
+              {stage === "book" && (
+                <Step
+                  title="Pick a time."
+                  subtitle="20-minute discovery call. We'll review your site, your goals, and what a fixed quote would look like."
+                >
+                  <CalEmbed minHeight={500} />
+                  <button
+                    type="button"
+                    onClick={() => setStage("init")}
+                    className="mt-4 inline-flex items-center gap-1.5 text-xs text-mute transition hover:text-bone"
+                  >
+                    ← Back to the form
+                  </button>
                 </Step>
               )}
 

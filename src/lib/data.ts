@@ -273,6 +273,13 @@ export const CASE_STUDIES: CaseStudy[] = [
     tags: ["Portal", "Dashboard", "Auth", "Invoices", "Files"],
     services: ["Client portal", "Authentication", "Stripe billing", "File uploads"],
     permissionStatus: "internal",
+    timeline: [
+      { phase: "Discovery", description: "Mapped role permissions (admin/client/contractor), audit log requirements, and Stripe state machine.", dates: "Week 1" },
+      { phase: "Schema + auth", description: "Supabase tables, RLS policies, magic-link auth, password reset, session refresh.", dates: "Week 2" },
+      { phase: "Portal UI", description: "Project tracker, milestone signoff, file uploader, invoice viewer, support inbox.", dates: "Week 3–4" },
+      { phase: "Admin panel", description: "User management, project CRUD, billing overrides, audit log export.", dates: "Week 5" },
+      { phase: "Hardening + launch", description: "Penetration sweep, accessibility pass, RUM wiring, internal pilot.", dates: "Week 6" },
+    ],
   },
   {
     slug: "service-business",
@@ -303,6 +310,13 @@ export const CASE_STUDIES: CaseStudy[] = [
     tags: ["Website", "Booking", "Lead Capture", "Local Business"],
     services: ["Website design", "Booking flow", "Lead capture", "SEO"],
     permissionStatus: "concept",
+    timeline: [
+      { phase: "Audit", description: "Baseline Lighthouse, mobile session recording, call-tracking analysis on existing site.", dates: "Day 1–3" },
+      { phase: "Information architecture", description: "Service hierarchy, location pages, lead-magnet placement, structured pricing.", dates: "Week 1" },
+      { phase: "Design + content", description: "Mobile-first wireframes, copy rewrite, hero photography pipeline.", dates: "Week 2" },
+      { phase: "Build", description: "Next.js implementation, Cal.com booking, lead-capture server actions, image optimization.", dates: "Week 2–3" },
+      { phase: "Launch + measure", description: "DNS cutover, analytics + heatmap install, two-week post-launch tune.", dates: "Week 3" },
+    ],
   },
   {
     slug: "checkout-flow",
@@ -333,6 +347,12 @@ export const CASE_STUDIES: CaseStudy[] = [
     tags: ["Stripe", "Payments", "Deposit", "Checkout"],
     services: ["Stripe integration", "Payment flow", "Webhook automation"],
     permissionStatus: "internal",
+    timeline: [
+      { phase: "Spec", description: "Stripe product + price catalog modeled in code, env-driven so the build never carries plaintext IDs.", dates: "Day 1" },
+      { phase: "Server action", description: "Discriminated-union validation, allowlist enforcement, fallback lead capture if Stripe fails.", dates: "Day 2" },
+      { phase: "Webhook", description: "Signature verification, idempotent handlers for completed/failed/subscription events.", dates: "Day 3" },
+      { phase: "Email + ops", description: "Resend confirmation, internal Slack ping, intake-form email to customer.", dates: "Day 4" },
+    ],
   },
   {
     slug: "restaurant-rebuild",
@@ -363,6 +383,12 @@ export const CASE_STUDIES: CaseStudy[] = [
     tags: ["Restaurant", "Reservations", "Menu", "Mobile"],
     services: ["Website design", "Reservations integration", "Menu CMS"],
     permissionStatus: "concept",
+    timeline: [
+      { phase: "Photo audit", description: "Reshoot list, file-size targets, color-grading reference per dish.", dates: "Week 1" },
+      { phase: "Menu schema", description: "Categories, allergens, prices, seasonal flags modeled in Sanity for non-technical edits.", dates: "Week 1" },
+      { phase: "Reservation hook-up", description: "OpenTable / Resy webhook to capture booking confirmations in the CMS for analytics.", dates: "Week 2" },
+      { phase: "Build + ship", description: "Next.js implementation, image optimization pipeline, mobile-first reservation flow.", dates: "Week 2–3" },
+    ],
   },
   {
     slug: "landing-performance",
@@ -393,6 +419,12 @@ export const CASE_STUDIES: CaseStudy[] = [
     tags: ["Performance", "CRO", "SEO", "Speed"],
     services: ["Performance audit", "CRO", "SEO refactor"],
     permissionStatus: "internal",
+    timeline: [
+      { phase: "RUM baseline", description: "Wired Vercel Speed Insights + Datadog RUM to capture real user LCP / CLS / INP before any change.", dates: "Day 1" },
+      { phase: "Above-fold rewrite", description: "Replaced image stack with a single hero, deferred non-critical JS, font subset.", dates: "Day 2–3" },
+      { phase: "Form + CTA simplification", description: "5 above-fold CTAs → 1 primary + 1 secondary. Form moved to server actions.", dates: "Day 3" },
+      { phase: "A/B + ship", description: "GrowthBook flag for the new layout, 7-day split, full rollout once delta confirmed.", dates: "Day 4–10" },
+    ],
   },
 ];
 
