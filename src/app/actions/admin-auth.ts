@@ -1,6 +1,13 @@
 "use server";
 
 import { z } from "zod";
+import { cookies } from "next/headers";
+
+/** Name of the httpOnly session cookie middleware + API routes validate.
+ * Kept in sync with the literal in middleware.ts and admin-session.ts —
+ * a "use server" file can only export async functions, so this can't be
+ * a shared export. */
+const ADMIN_COOKIE = "wl_admin";
 
 /**
  * Server-side admin auth.
@@ -89,8 +96,65 @@ export async function loginAction(input: unknown): Promise<LoginResult> {
     return { ok: false, token: "", error: "Wrong credentials." };
   }
 
+  // Set an httpOnly session cookie. This is what `middleware.ts` validates
+  // to gate the /admin/dashboard pages server-side. The localStorage token
+  // (returned below) is kept only for the client-side `isAuthed()` UX and
+  // the `x-admin-token` header on API calls. httpOnly means this cookie is
+  // NOT readable by JavaScript, so an XSS can't exfiltrate it.
+  try {
+    const store = await cookies();
+    store.set(ADMIN_COOKIE, expectedPass, {
+      httpOnly: true,
+      secure: IS_VERCEL, // https-only in prod; plain http on localhost dev
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+  } catch {
+    // cookies() can throw if called outside a request scope — non-fatal,
+    // the header-based path still authenticates API calls.
+  }
+
   // Return the password itself as the bearer token. The server validates
   // x-admin-token === ADMIN_PASSWORD on every privileged request — so
   // rotating the password automatically invalidates every active session.
   return { ok: true, token: expectedPass };
+}
+
+/**
+ * Clear the admin session cookie. Called by the client `logout()` helper.
+ */
+export async function logoutAction(): Promise<void> {
+  try {
+    const store = await cookies();
+    store.delete(ADMIN_COOKIE);
+  } catch {
+    /* no-op outside request scope */
+  }
+}
+
+/**
+ * Server-truth check of the admin session cookie. The login page uses this
+ * (instead of the localStorage-only `isAuthed()`) to decide whether to
+ * auto-forward to the dashboard — which prevents a redirect loop where a
+ * stale localStorage token sends the user to a dashboard the middleware
+ * then bounces for lacking a valid cookie.
+ */
+export async function adminSessionValid(): Promise<boolean> {
+  try {
+    const store = await cookies();
+    const supplied = store.get(ADMIN_COOKIE)?.value ?? "";
+    const expected = envPassword();
+    return Boolean(expected) && safeEquals(supplied, expected as string);
+  } catch {
+    return false;
+  }
+}
+
+/** Resolve the expected password (prod requires env; dev has a default). */
+function envPassword(): string | null {
+  const pwd = process.env.ADMIN_PASSWORD;
+  if (pwd) return pwd;
+  if (!IS_VERCEL) return "admin2026";
+  return null;
 }

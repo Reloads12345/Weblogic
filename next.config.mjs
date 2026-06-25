@@ -3,6 +3,50 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const isDev = process.env.NODE_ENV !== "production";
+
+/**
+ * Content-Security-Policy.
+ *
+ * Allowlists exactly the third parties this site actually loads:
+ *   • Stripe   — js.stripe.com / api.stripe.com / hooks + checkout (payments)
+ *   • Cal.com  — app.cal.com / cal.com (inline booking embed)
+ *   • Vercel   — *.vercel-scripts.com (Analytics) + vitals.vercel-insights.com
+ *                (Speed Insights beacons); their scripts are same-origin
+ *   • Blob     — *.public.blob.vercel-storage.com (admin-uploaded media)
+ *   • Unsplash — images.unsplash.com (next/image remote source)
+ *
+ * `'unsafe-inline'` is required on script-src/style-src because Next.js
+ * injects inline bootstrap scripts + a JSON-LD block, and framer-motion
+ * writes inline styles — none of which carry a nonce here. Host
+ * allowlisting still blocks loading attacker scripts from external
+ * origins, and frame-ancestors/object-src/base-uri close the big gaps.
+ *
+ * `'unsafe-eval'` is added ONLY in dev (React Refresh / HMR needs it);
+ * production CSP has no eval.
+ *
+ * ⚠️ If you add a new third-party embed (YouTube, Calendly, a chat
+ * widget, etc.), add its origin to the relevant directive here or the
+ * browser will silently block it. Smoke-test checkout + the Cal embed +
+ * a work-card video after any change to this policy.
+ */
+const csp = [
+  `default-src 'self'`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://js.stripe.com https://app.cal.com https://*.vercel-scripts.com`,
+  `style-src 'self' 'unsafe-inline'`,
+  `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://images.unsplash.com https://*.stripe.com`,
+  `media-src 'self' blob: https://*.public.blob.vercel-storage.com`,
+  `font-src 'self' data:`,
+  `connect-src 'self' https://*.public.blob.vercel-storage.com https://api.stripe.com https://app.cal.com https://*.vercel-scripts.com https://vitals.vercel-insights.com`,
+  `frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://app.cal.com https://cal.com`,
+  `worker-src 'self' blob:`,
+  `frame-ancestors 'none'`,
+  `base-uri 'self'`,
+  `form-action 'self' https://checkout.stripe.com`,
+  `object-src 'none'`,
+  `upgrade-insecure-requests`,
+].join("; ");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -49,6 +93,9 @@ const nextConfig = {
             value:
               "camera=(), microphone=(), geolocation=(), payment=(self), interest-cohort=()",
           },
+          // Content-Security-Policy — see the `csp` constant above for the
+          // full allowlist + maintenance notes.
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
       {

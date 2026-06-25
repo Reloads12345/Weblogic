@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { headers } from "next/headers";
 import { reportError, reportWarning } from "@/lib/error-reporter";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * Server action that runs a free site audit for a visitor.
@@ -60,9 +61,9 @@ export interface AuditResult {
 
 /* ─────────────────────── Rate limit ─────────────────────── */
 
-const RATE_LIMIT = new Map<string, { count: number; resetAt: number }>();
-const RATE_WINDOW_MS = 60 * 60 * 1000;
+// Durable when Vercel KV is provisioned, in-memory fallback otherwise.
 const RATE_MAX = 4;
+const RATE_WINDOW_SEC = 60 * 60;
 
 async function getClientIp(): Promise<string> {
   try {
@@ -75,17 +76,22 @@ async function getClientIp(): Promise<string> {
   }
 }
 
-async function rateLimited(): Promise<boolean> {
+/**
+ * Rate-limit the audit by IP *and*, when an email is supplied, by email.
+ * The email key matters because the report-email path can address an
+ * arbitrary recipient — capping per-email blocks anyone from using the
+ * tool to fan WebLogic-branded mail out across many addresses from one IP.
+ */
+async function auditRateLimited(email?: string): Promise<boolean> {
   const ip = await getClientIp();
-  const now = Date.now();
-  const entry = RATE_LIMIT.get(ip);
-  if (!entry || entry.resetAt < now) {
-    RATE_LIMIT.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
+  const checks = [rateLimit(`audit:ip:${ip}`, RATE_MAX, RATE_WINDOW_SEC)];
+  if (email) {
+    checks.push(
+      rateLimit(`audit:email:${email.toLowerCase()}`, 2, 24 * 60 * 60),
+    );
   }
-  if (entry.count >= RATE_MAX) return true;
-  entry.count += 1;
-  return false;
+  const results = await Promise.all(checks);
+  return results.some((r) => r.limited);
 }
 
 /* ─────────────────────── Normalization ─────────────────────── */
@@ -266,6 +272,10 @@ async function emailFullReport(
       <h1 style="font-size:26px;line-height:1.15;margin:8px 0 16px;letter-spacing:-0.5px;">
         Your free audit is ready.
       </h1>
+      <p style="color:#8e8e93;font-size:12px;line-height:1.5;margin:0 0 12px;">
+        You requested this free audit at weblogic.digital. If you didn't,
+        you can safely ignore this email — no further messages will be sent.
+      </p>
       <p style="color:#cccccc;font-size:15px;line-height:1.5;">
         Mobile Lighthouse scores for <a href="${escapeHtml(url)}" style="color:#0052ff;">${escapeHtml(url)}</a>. The full report has more — reply to this email if you want a written plan + fixed quote.
       </p>
@@ -295,21 +305,50 @@ async function emailFullReport(
     </div>
   </body></html>`;
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
+  // Two SEPARATE sends, deliberately not bundled into one recipient list:
+  //   1. The report → the visitor's (unverified) address. Solicited
+  //      framing + per-email rate cap upstream make this safe to send.
+  //   2. A lead notice → the studio's FIXED address. Never to a
+  //      user-controlled recipient, so the audit tool can't be turned
+  //      into a relay that mails arbitrary addresses on the studio's behalf.
+  const send = (payload: Record<string, unknown>) =>
+    fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "content-type": "application/json",
         authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [to, studio].filter((v, i, a) => a.indexOf(v) === i),
-        subject: `Your WebLogic audit — ${new URL(url).hostname}`,
-        html,
-        reply_to: studio,
-      }),
+      body: JSON.stringify({ from: fromEmail, ...payload }),
     });
+
+  try {
+    // 1) Report to the visitor.
+    const res = await send({
+      to: [to],
+      subject: `Your WebLogic audit — ${new URL(url).hostname}`,
+      html,
+      reply_to: studio,
+    });
+
+    // 2) Lead notice to the studio (best-effort; failure here doesn't
+    //    affect the visitor-facing result).
+    if (to !== studio) {
+      await send({
+        to: [studio],
+        subject: `New audit lead — ${new URL(url).hostname} (${to})`,
+        html: `<p style="font-family:sans-serif">Audit requested for <a href="${escapeHtml(
+          url,
+        )}">${escapeHtml(url)}</a> by <strong>${escapeHtml(
+          to,
+        )}</strong>.</p><p style="font-family:sans-serif;color:#666">Perf ${
+          result.scores?.performance ?? "—"
+        } · SEO ${result.scores?.seo ?? "—"} · A11y ${
+          result.scores?.accessibility ?? "—"
+        }</p>`,
+        reply_to: to,
+      }).catch(() => {});
+    }
+
     return res.ok;
   } catch (err) {
     reportWarning(err, { route: "audit", tags: { stage: "email", url } });
@@ -342,7 +381,7 @@ export async function runAudit(input: AuditInput): Promise<AuditResult> {
     };
   }
 
-  if (await rateLimited()) {
+  if (await auditRateLimited(parsed.data.email)) {
     return {
       ok: false,
       error:

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Lock, Loader2 } from "lucide-react";
 import Logo from "@/components/ui/Logo";
-import { isAuthed, login } from "@/components/admin/AdminAuth";
+import { login } from "@/components/admin/AdminAuth";
+import { adminSessionValid } from "@/app/actions/admin-auth";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -16,11 +17,22 @@ export default function AdminLogin() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (isAuthed()) {
-      router.replace("/admin/dashboard");
-    } else {
-      setChecking(false);
-    }
+    // Ask the server whether the httpOnly session cookie is valid — NOT
+    // localStorage. Auto-forwarding on localStorage alone would loop
+    // against the middleware, which only honors the cookie.
+    let cancelled = false;
+    adminSessionValid()
+      .then((valid) => {
+        if (cancelled) return;
+        if (valid) router.replace("/admin/dashboard");
+        else setChecking(false);
+      })
+      .catch(() => {
+        if (!cancelled) setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const onSubmit = async (e: React.FormEvent) => {

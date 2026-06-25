@@ -34,8 +34,12 @@ const HAS_BLOB_TOKEN = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
 const VALID_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
+// NOTE: image/svg+xml is intentionally NOT allowed. SVGs can embed
+// <script>, so an uploaded SVG is a stored-XSS vector if ever rendered
+// same-origin. The brand logo is a committed PNG and admin media is
+// raster/video, so nothing legitimate needs SVG upload. Re-add only if a
+// real need appears AND the file is sanitized (e.g. DOMPurify) first.
 const VALID_IMAGE = [
-  "image/svg+xml",
   "image/png",
   "image/jpeg",
   "image/webp",

@@ -3,11 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { isAuthed } from "@/components/admin/AdminAuth";
+import { adminSessionValid } from "@/app/actions/admin-auth";
 
 /**
  * Wrapper that renders its children only when the user is authenticated.
  * Otherwise redirects to /admin (login).
+ *
+ * The real gate is now `middleware.ts` (validates the httpOnly cookie at
+ * the edge before any dashboard code is served). This component is a
+ * second, in-page layer that uses the SAME server-truth cookie check —
+ * NOT localStorage — so the two layers never disagree and loop.
  */
 export default function AdminGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,12 +20,23 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (isAuthed()) {
-      setOk(true);
-    } else {
-      router.replace("/admin");
-    }
-    setChecking(false);
+    let cancelled = false;
+    adminSessionValid()
+      .then((valid) => {
+        if (cancelled) return;
+        if (valid) {
+          setOk(true);
+          setChecking(false);
+        } else {
+          router.replace("/admin");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) router.replace("/admin");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (checking || !ok) {

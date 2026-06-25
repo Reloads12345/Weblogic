@@ -92,6 +92,16 @@ export async function POST(req: Request) {
     JSON.stringify({ type: event.type, id: event.id }),
   );
 
+  // Idempotency guard — Stripe redelivers events on its own retry schedule
+  // (and on any 5xx we return). Without a dedup, a redelivered
+  // `checkout.session.completed` would send the customer a SECOND
+  // confirmation email. We claim a per-event marker before processing; if
+  // the marker already exists we ack 200 and do nothing.
+  if (await alreadyProcessed(event.id)) {
+    console.log("[stripe-webhook] duplicate_skipped", event.id);
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -178,6 +188,45 @@ export async function POST(req: Request) {
 }
 
 /* ─────────────────────── Helpers ─────────────────────── */
+
+/**
+ * Idempotency marker via Vercel Blob. Returns true if this event id was
+ * already processed (so the caller should no-op), false if this is the
+ * first time we've seen it (and claims the marker).
+ *
+ * Storage: a tiny per-event blob at `stripe-events/<id>.json`. We `head()`
+ * to check existence, then `put()` to claim. There's a microscopic race
+ * window between head + put if Stripe delivers the same event to two
+ * lambdas within milliseconds — acceptable, because the worst case is the
+ * pre-existing behavior (one duplicate email), not a payment error.
+ *
+ * If the Blob token isn't configured (local dev), we fail OPEN — every
+ * event is treated as new — because dev rarely sees real duplicate
+ * deliveries and we don't want to swallow events while testing.
+ */
+async function alreadyProcessed(eventId: string): Promise<boolean> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return false;
+  const safeId = eventId.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!safeId) return false;
+  const key = `stripe-events/${safeId}.json`;
+  try {
+    const { head, put } = await import("@vercel/blob");
+    const existing = await head(key).catch(() => null);
+    if (existing) return true;
+    await put(key, JSON.stringify({ id: eventId, at: Date.now() }), {
+      access: "public",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    });
+    return false;
+  } catch (err) {
+    // On any storage error, fail open (process the event) rather than
+    // dropping a potentially important payment event.
+    console.warn("[stripe-webhook] idempotency_check_failed", err);
+    return false;
+  }
+}
 
 async function sendCheckoutConfirmation(opts: {
   to: string | null;

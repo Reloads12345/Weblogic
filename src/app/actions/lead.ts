@@ -4,6 +4,7 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { rateLimit } from "@/lib/rate-limit";
 
 /* ----------------------------------------------------------------------------
    Lead submission Server Action.
@@ -70,11 +71,12 @@ interface SubmitResult {
   };
 }
 
-/* ----------------------- Rate limit (in-memory) ----------------------- */
+/* ----------------------- Rate limit ----------------------- */
+// Durable when Vercel KV is provisioned, in-memory fallback otherwise.
+// See src/lib/rate-limit.ts.
 
-const RATE_LIMIT = new Map<string, { count: number; resetAt: number }>();
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
-const RATE_MAX = 4; // submissions per IP per window
+const RATE_MAX = 4; // submissions per IP per hour
+const RATE_WINDOW_SEC = 60 * 60;
 
 async function getClientIp(): Promise<string> {
   try {
@@ -89,15 +91,8 @@ async function getClientIp(): Promise<string> {
 
 async function rateLimited(): Promise<boolean> {
   const ip = await getClientIp();
-  const now = Date.now();
-  const entry = RATE_LIMIT.get(ip);
-  if (!entry || entry.resetAt < now) {
-    RATE_LIMIT.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= RATE_MAX) return true;
-  entry.count += 1;
-  return false;
+  const { limited } = await rateLimit(`lead:${ip}`, RATE_MAX, RATE_WINDOW_SEC);
+  return limited;
 }
 
 /* ----------------------- Entry point ----------------------- */

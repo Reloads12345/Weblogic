@@ -15,7 +15,7 @@
  * `adminFetch()`.
  */
 
-import { loginAction } from "@/app/actions/admin-auth";
+import { loginAction, logoutAction } from "@/app/actions/admin-auth";
 
 const KEY = "weblogic.admin.session";
 
@@ -68,6 +68,10 @@ export function logout() {
   try {
     localStorage.removeItem(KEY);
   } catch {}
+  // Clear the httpOnly cookie server-side too (JS can't delete it directly).
+  // Fire-and-forget — the localStorage clear already logs the user out of
+  // the client UX; this just invalidates the server session cookie.
+  void logoutAction().catch(() => {});
 }
 
 /**

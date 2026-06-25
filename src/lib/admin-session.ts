@@ -65,9 +65,29 @@ function safeEquals(a: string, b: string): boolean {
   return m === 0;
 }
 
+/** Name of the httpOnly admin session cookie (mirrors ADMIN_COOKIE in the
+ * login action — duplicated here so this module has no client/server-action
+ * import edge cases). */
+const ADMIN_COOKIE = "wl_admin";
+
+/** Pull a single cookie value out of a raw Cookie header. */
+function readCookie(req: Request, name: string): string {
+  const raw = req.headers.get("cookie");
+  if (!raw) return "";
+  for (const part of raw.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === name) return decodeURIComponent(v.join("="));
+  }
+  return "";
+}
+
 /**
  * Validate an admin request. Returns `null` if authorized, or a
  * NextResponse-shaped error object the caller can return directly.
+ *
+ * Accepts EITHER the `x-admin-token` header (sent by `adminFetch`) OR the
+ * httpOnly `wl_admin` cookie (set at login). Either proves the caller knows
+ * the current ADMIN_PASSWORD.
  */
 export function checkAdmin(req: Request): null | { status: number; body: { error: string; code: string } } {
   if (!adminConfigured()) {
@@ -80,7 +100,8 @@ export function checkAdmin(req: Request): null | { status: number; body: { error
     };
   }
 
-  const supplied = req.headers.get("x-admin-token") ?? "";
+  const headerToken = req.headers.get("x-admin-token") ?? "";
+  const cookieToken = readCookie(req, ADMIN_COOKIE);
   const expected = expectedAdminToken();
   if (!expected) {
     return {
@@ -91,7 +112,7 @@ export function checkAdmin(req: Request): null | { status: number; body: { error
       },
     };
   }
-  if (!safeEquals(supplied, expected)) {
+  if (!safeEquals(headerToken, expected) && !safeEquals(cookieToken, expected)) {
     return {
       status: 401,
       body: { error: "Unauthorized", code: "ADMIN_UNAUTHORIZED" },
